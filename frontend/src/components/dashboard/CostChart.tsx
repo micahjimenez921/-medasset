@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardHeader } from '../ui/Card'
 import Skeleton from '../ui/Skeleton'
 import { formatPeso } from '../../lib/format'
@@ -25,13 +25,7 @@ export default function CostChart({ byMonth, loading }: CostChartProps) {
           <Skeleton className="h-full w-full" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0f766e" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#0f766e" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
+            <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
               <YAxis
@@ -41,15 +35,12 @@ export default function CostChart({ byMonth, loading }: CostChartProps) {
                 tick={{ fontSize: 12, fill: '#64748b' }}
                 tickFormatter={(v) => (Number(v) >= 1000 ? `${Number(v) / 1000}k` : String(v))}
               />
-              <Tooltip formatter={(value) => [formatPeso(Number(value)), 'Cost']} />
-              <Area
-                type="monotone"
-                dataKey="cost"
-                stroke="#0f766e"
-                strokeWidth={2.5}
-                fill="url(#costFill)"
+              <Tooltip
+                cursor={{ fill: '#f1f5f9' }}
+                formatter={(value) => [formatPeso(Number(value)), 'Cost']}
               />
-            </AreaChart>
+              <Bar dataKey="cost" fill="#0f766e" radius={[4, 4, 0, 0]} maxBarSize={36} />
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>
