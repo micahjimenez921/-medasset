@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRightLeft, Gauge, Power, Repeat } from 'lucide-react'
+import { ArrowLeft, ArrowRightLeft, ClipboardPlus, Gauge, Power, Repeat } from 'lucide-react'
 import { useFetch } from '../hooks/useFetch'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -15,11 +15,12 @@ import RuntimeModal from '../components/assets/RuntimeModal'
 import TransferModal from '../components/assets/TransferModal'
 import StatusModal from '../components/assets/StatusModal'
 import DecommissionModal from '../components/assets/DecommissionModal'
+import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
 import WorkOrderTable from '../components/workorders/WorkOrderTable'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AssetDetail } from '../api/types'
 
-type ModalName = 'runtime' | 'transfer' | 'status' | 'decommission' | null
+type ModalName = 'runtime' | 'transfer' | 'status' | 'decommission' | 'workorder' | null
 
 export default function AssetDetailPage() {
   const { id } = useParams()
@@ -72,6 +73,9 @@ export default function AssetDetailPage() {
             <StatusBadge value={asset.status} />
             {!retired && (
               <>
+                <Button onClick={() => setModal('workorder')}>
+                  <ClipboardPlus size={16} /> New work order
+                </Button>
                 <Button variant="secondary" onClick={() => setModal('runtime')}>
                   <Gauge size={16} /> Runtime
                 </Button>
@@ -149,6 +153,9 @@ export default function AssetDetailPage() {
       )}
       {modal === 'status' && (
         <StatusModal assetId={asset.asset_id} currentStatus={asset.status} onClose={() => setModal(null)} onDone={done} />
+      )}
+      {modal === 'workorder' && (
+        <CreateWorkOrderModal initial={{ assetId: asset.asset_id }} onClose={() => setModal(null)} />
       )}
       {modal === 'decommission' && (
         <DecommissionModal assetId={asset.asset_id} assetTag={asset.asset_tag} onClose={() => setModal(null)} onDone={done} />

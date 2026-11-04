@@ -187,3 +187,72 @@ export interface SupplierOption {
   vendor_id: number
   name: string
 }
+
+/* ------------------------------------------------------------------ */
+/* Work orders                                                         */
+/* ------------------------------------------------------------------ */
+export type WorkOrderStatus = WorkOrderSummary['status']
+
+export interface LaborLine {
+  assignment_id: number
+  technician_id: number
+  technician: string
+  specialization: string | null
+  role: 'Lead' | 'Assistant'
+  hours_worked: number
+  hourly_rate: number
+  labor_cost: number
+  assigned_at: string
+}
+
+export interface PartLine {
+  wo_part_id: number
+  part_id: number
+  part_number: string
+  part_name: string
+  quantity: number
+  unit_cost: number
+  line_cost: number
+  used_at: string
+}
+
+export interface CalibrationRecord {
+  calibration_id: number
+  calibrated_on: string
+  result: 'Pass' | 'Fail' | 'Adjusted'
+  certificate_no: string | null
+  notes: string | null
+}
+
+export interface WorkOrderDetail {
+  work_order: WorkOrderSummary
+  labor: LaborLine[]
+  parts: PartLine[]
+  calibration: CalibrationRecord | null
+}
+
+export interface MaintenanceTypeOption {
+  type_id: number
+  name: string
+  is_preventive: number
+  is_calibration: number
+}
+
+export interface TechnicianOption {
+  technician_id: number
+  employee_no: string
+  full_name: string
+  specialization: string | null
+  hourly_rate: number
+  is_active: number
+}
+
+export interface PartOption {
+  part_id: number
+  part_number: string
+  name: string
+  unit_cost: number
+  quantity_on_hand: number
+  reorder_level: number
+  is_low_stock: number
+}

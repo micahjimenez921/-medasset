@@ -12,10 +12,11 @@ interface ToastItem {
   message: string
 }
 
+// solid colours so a message is noticed immediately
 const styles: Record<Kind, string> = {
-  success: 'border-emerald-500 bg-emerald-50 text-emerald-900',
-  error: 'border-red-500 bg-red-50 text-red-900',
-  info: 'border-sky-500 bg-sky-50 text-sky-900',
+  success: 'border-emerald-800 bg-emerald-600 text-white',
+  error: 'border-red-800 bg-red-600 text-white',
+  info: 'border-sky-800 bg-sky-600 text-white',
 }
 
 const titles: Record<Kind, string> = {
@@ -37,7 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (kind: Kind, message: string) => {
       const id = nextId++
       setToasts((list) => [...list, { id, kind, message }])
-      window.setTimeout(() => dismiss(id), kind === 'error' ? 7000 : 4000)
+      window.setTimeout(() => dismiss(id), kind === 'error' ? 8000 : 4500)
     },
     [dismiss],
   )
@@ -54,23 +55,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+      {/* top-centre: where the user is already looking, above any open dialog */}
+      <div className="pointer-events-none fixed left-1/2 top-5 z-[100] flex w-[28rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
-            role="status"
-            className={`pointer-events-auto flex items-start gap-3 rounded-lg border-l-4 p-3 shadow-lg ${styles[t.kind]}`}
+            role="alert"
+            className={`toast-in pointer-events-auto flex items-start gap-3 rounded-xl border-b-4 px-4 py-3 shadow-2xl ${styles[t.kind]}`}
           >
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{titles[t.kind]}</p>
-              <p className="mt-0.5 break-words text-sm">{t.message}</p>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-80">{titles[t.kind]}</p>
+              <p className="mt-0.5 break-words text-sm font-medium leading-snug">{t.message}</p>
             </div>
             <button
               onClick={() => dismiss(t.id)}
-              className="rounded p-0.5 opacity-60 hover:opacity-100"
+              className="rounded p-0.5 opacity-80 hover:bg-white/20 hover:opacity-100"
               aria-label="Dismiss"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         ))}

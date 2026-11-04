@@ -8,3 +8,19 @@
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
 }
+
+/* slide-in used by the pop-up messages */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.22s ease-out;
+}

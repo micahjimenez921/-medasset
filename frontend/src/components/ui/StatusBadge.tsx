@@ -40,6 +40,9 @@ const toneByValue: Record<string, Tone> = {
   OK: 'green',
   // warranty
   Active: 'green',
+  Pass: 'green',
+  Fail: 'red',
+  Adjusted: 'amber',
   Expiring: 'amber',
   Expired: 'red',
   None: 'slate',
