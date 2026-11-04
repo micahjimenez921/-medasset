@@ -278,3 +278,26 @@ export interface AlertItem {
   resolved_at: string | null
   work_order_id: number | null
 }
+
+/* ------------------------------------------------------------------ */
+/* Audit + job logs                                                    */
+/* ------------------------------------------------------------------ */
+export interface AuditLogEntry {
+  audit_id: number
+  table_name: string
+  record_id: number
+  action: 'INSERT' | 'UPDATE' | 'DELETE'
+  /** JSON text written by the database trigger */
+  old_values: string | null
+  new_values: string | null
+  changed_by: string
+  changed_at: string
+}
+
+export interface JobLogEntry {
+  job_log_id: number
+  job_name: string
+  triggered_by: 'EVENT' | 'MANUAL'
+  alerts_created: number
+  ran_at: string
+}

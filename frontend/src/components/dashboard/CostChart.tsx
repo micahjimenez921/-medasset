@@ -8,10 +8,11 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 interface CostChartProps {
   byMonth: { month_no: number; total_cost: number }[] | undefined
   loading: boolean
+  subtitle?: string
 }
 
 /** Completed-work cost per month (labor + parts), from sp_report_costs. */
-export default function CostChart({ byMonth, loading }: CostChartProps) {
+export default function CostChart({ byMonth, loading, subtitle }: CostChartProps) {
   const data = MONTHS.map((month, i) => ({
     month,
     cost: byMonth?.find((row) => row.month_no === i + 1)?.total_cost ?? 0,
@@ -19,7 +20,7 @@ export default function CostChart({ byMonth, loading }: CostChartProps) {
 
   return (
     <Card>
-      <CardHeader title="Maintenance cost" subtitle="Labor and parts on completed work orders, this year" />
+      <CardHeader title="Maintenance cost" subtitle={subtitle ?? 'Labor and parts on completed work orders, this year'} />
       <div className="h-72 p-4">
         {loading ? (
           <Skeleton className="h-full w-full" />

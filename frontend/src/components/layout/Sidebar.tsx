@@ -31,7 +31,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-teal-900 text-teal-50 transition-transform lg:translate-x-0 ${
+        className={`print:hidden fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-teal-900 text-teal-50 transition-transform lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

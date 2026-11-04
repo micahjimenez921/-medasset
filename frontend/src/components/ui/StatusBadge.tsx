@@ -46,6 +46,13 @@ const toneByValue: Record<string, Tone> = {
   Expiring: 'amber',
   Expired: 'red',
   None: 'slate',
+  // audit log
+  INSERT: 'green',
+  UPDATE: 'sky',
+  DELETE: 'red',
+  // job log
+  EVENT: 'violet',
+  MANUAL: 'slate',
 }
 
 export function Badge({ tone = 'slate', children }: { tone?: Tone; children: ReactNode }) {
