@@ -256,3 +256,25 @@ export interface PartOption {
   reorder_level: number
   is_low_stock: number
 }
+
+/* ------------------------------------------------------------------ */
+/* Alerts                                                              */
+/* ------------------------------------------------------------------ */
+export interface AlertItem {
+  alert_id: number
+  schedule_id: number
+  asset_id: number
+  asset_tag: string
+  model_name: string
+  department: string
+  type_name: string
+  alert_type: 'UPCOMING' | 'OVERDUE'
+  severity: 'Warning' | 'Critical'
+  message: string
+  status: 'Open' | 'Acknowledged' | 'Resolved'
+  generated_at: string
+  acknowledged_by: string | null
+  acknowledged_at: string | null
+  resolved_at: string | null
+  work_order_id: number | null
+}
