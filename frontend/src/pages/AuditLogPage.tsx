@@ -10,12 +10,16 @@ import { Card } from '../components/ui/Card'
 import { SelectInput } from '../components/ui/Field'
 import AuditTable from '../components/audit/AuditTable'
 import JobLogTable from '../components/audit/JobLogTable'
+import SecurityEventTable, { SECURITY_EVENT_TYPES } from '../components/audit/SecurityEventTable'
+import RolesMatrix from '../components/audit/RolesMatrix'
 import { describeChanges, humanField, showValue, TABLE_LABELS } from '../lib/audit'
-import type { AuditLogEntry, JobLogEntry } from '../api/types'
+import type { AuditLogEntry, JobLogEntry, RoleMatrixData, SecurityEvent } from '../api/types'
 
 const VIEWS = [
   { value: 'changes', label: 'Change history' },
+  { value: 'security', label: 'Security events' },
   { value: 'jobs', label: 'Scheduled job runs' },
+  { value: 'access', label: 'Roles & permissions' },
 ]
 
 export default function AuditLogPage() {
@@ -23,13 +27,18 @@ export default function AuditLogPage() {
   const [table, setTable] = useState('')
   const [limit, setLimit] = useState('100')
   const [text, setText] = useState('')
+  const [eventType, setEventType] = useState('')
 
   const query = new URLSearchParams({ limit })
   if (table) query.set('table', table)
 
   const audit = useFetch<AuditLogEntry[]>(view === 'changes' ? `/audit-logs/?${query.toString()}` : null)
   const jobs = useFetch<JobLogEntry[]>(view === 'jobs' ? '/job-logs/?limit=100' : null)
-  const active = view === 'changes' ? audit : jobs
+  const events = useFetch<SecurityEvent[]>(
+    view === 'security' ? `/security-events/?limit=${limit}${eventType ? `&type=${eventType}` : ''}` : null,
+  )
+  const matrix = useFetch<RoleMatrixData>(view === 'access' ? '/roles/' : null)
+  const active = view === 'security' ? events : view === 'jobs' ? jobs : view === 'access' ? matrix : audit
 
   // quick client-side search over the loaded entries
   const needle = text.trim().toLowerCase()
@@ -47,7 +56,7 @@ export default function AuditLogPage() {
     <>
       <PageHeader
         title="Audit log"
-        subtitle="Every change to assets, work orders, labor, parts and schedules. Entries are written by database triggers, so the application cannot skip or edit them."
+        subtitle="Every change, sign-in and permission check, with the real user behind it. Entries are written by the database itself and are append-only: nobody can edit or delete them."
         actions={
           <Button variant="secondary" onClick={active.reload}>
             <RefreshCw size={16} />
@@ -61,6 +70,23 @@ export default function AuditLogPage() {
       </div>
 
       <Card>
+        {view === 'security' && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-3">
+            <SelectInput value={eventType} onChange={(e) => setEventType(e.target.value)} className="w-auto">
+              <option value="">All security events</option>
+              {SECURITY_EVENT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </SelectInput>
+            <SelectInput value={limit} onChange={(e) => setLimit(e.target.value)} className="w-auto">
+              <option value="100">Latest 100</option>
+              <option value="250">Latest 250</option>
+              <option value="500">Latest 500</option>
+            </SelectInput>
+          </div>
+        )}
         {view === 'changes' && (
           <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-3">
             <div className="relative min-w-56 flex-1">
@@ -101,13 +127,15 @@ export default function AuditLogPage() {
           </div>
         )}
         {view === 'changes' && audit.data && <AuditTable entries={entries} />}
+        {view === 'security' && events.data && <SecurityEventTable events={events.data} />}
         {view === 'jobs' && jobs.data && <JobLogTable jobs={jobs.data} />}
+        {view === 'access' && matrix.data && <RolesMatrix data={matrix.data} />}
       </Card>
 
       {view === 'jobs' && (
         <p className="mt-3 text-xs text-slate-500">
-          EVENT runs come from the MySQL event scheduler at 06:00 every day. MANUAL runs are the "Run preventive check"
-          button. For scheduled runs to appear, the event scheduler must be ON (see the README).
+          EVENT runs come from the MySQL event scheduler at 06:00 every day (run by SYSTEM). MANUAL runs are the
+          "Run preventive check" button, recorded with the user who clicked it. For scheduled runs to appear, the event scheduler must be ON (see the README).
         </p>
       )}
     </>

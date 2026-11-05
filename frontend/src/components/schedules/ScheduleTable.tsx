@@ -9,6 +9,7 @@ import type { Column } from '../ui/DataTable'
 import StatusBadge, { Badge } from '../ui/StatusBadge'
 import { formatDate, formatNumber } from '../../lib/format'
 import type { ScheduleStatus } from '../../api/types'
+import Can from '../auth/Can'
 
 interface ScheduleTableProps {
   schedules: ScheduleStatus[]
@@ -79,6 +80,7 @@ export default function ScheduleTable({ schedules, onChanged }: ScheduleTablePro
       header: 'Action',
       className: 'text-right',
       cell: (s) => (
+        <Can permission="schedule.manage">
         <Button
           variant="ghost"
           className="!px-2.5 !py-1.5"
@@ -91,6 +93,7 @@ export default function ScheduleTable({ schedules, onChanged }: ScheduleTablePro
           {s.is_active ? <Pause size={14} /> : <Play size={14} />}
           {s.is_active ? 'Pause' : 'Resume'}
         </Button>
+        </Can>
       ),
     },
   ]

@@ -1,8 +1,20 @@
 from django.urls import path
 
-from . import views
+from . import admin_views, auth_views, views
 
 urlpatterns = [
+    # sign in / out
+    path("auth/login/", auth_views.LoginView.as_view()),
+    path("auth/logout/", auth_views.LogoutView.as_view()),
+    path("auth/me/", auth_views.MeView.as_view()),
+    path("auth/change-password/", auth_views.ChangePasswordView.as_view()),
+
+    # administration + compliance
+    path("users/", admin_views.UserListView.as_view()),
+    path("users/<int:pk>/<str:action>/", admin_views.UserActionView.as_view()),
+    path("roles/", admin_views.RoleListView.as_view()),
+    path("security-events/", admin_views.SecurityEventView.as_view()),
+
     # dashboard + dropdown data
     path("dashboard/", views.DashboardView.as_view()),
     path("lookups/<str:name>/", views.LookupView.as_view()),

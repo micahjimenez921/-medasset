@@ -27,6 +27,7 @@ const columns: Column<JobLogEntry>[] = [
     ),
     csv: (j) => j.triggered_by,
   },
+  { header: 'Run by', cell: (j) => <span className="text-slate-600">{j.run_by ?? '—'}</span>, csv: (j) => j.run_by },
   { header: 'New alerts', cell: (j) => j.alerts_created, csv: (j) => j.alerts_created, className: 'text-right' },
 ]
 

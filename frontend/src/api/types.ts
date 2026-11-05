@@ -299,5 +299,75 @@ export interface JobLogEntry {
   job_name: string
   triggered_by: 'EVENT' | 'MANUAL'
   alerts_created: number
+  run_by: string | null
   ran_at: string
+}
+
+// ---------------------------------------------------------------------
+// Sign-in, users and security
+// ---------------------------------------------------------------------
+export type RoleName = 'Administrator' | 'Technician' | 'Viewer'
+
+export interface AuthUser {
+  user_id: number
+  username: string
+  full_name: string
+  email: string | null
+  role: RoleName
+  must_change_password: boolean
+  permissions: string[]
+}
+
+export interface UserRow {
+  user_id: number
+  username: string
+  full_name: string
+  email: string | null
+  role_id: number
+  role_name: RoleName
+  is_active: number
+  must_change_password: number
+  is_locked: number
+  last_login_at: string | null
+  password_changed_at: string | null
+  created_at: string
+  created_by: string
+}
+
+export interface RoleInfo {
+  role_id: number
+  name: RoleName
+  description: string
+  active_users: number
+}
+
+export interface PermissionInfo {
+  permission_id: number
+  code: string
+  category: string
+  description: string
+}
+
+export interface RoleMatrixData {
+  roles: RoleInfo[]
+  permissions: PermissionInfo[]
+  grants: { role_id: number; permission_code: string }[]
+}
+
+export interface SecurityEvent {
+  event_id: number
+  event_type: string
+  user_id: number | null
+  username: string | null
+  actor: string | null
+  ip_address: string | null
+  detail: string | null
+  created_at: string
+}
+
+/** Returned once when an account is created or a password is reset. */
+export interface TemporaryPasswordResult {
+  user_id: number
+  username: string
+  temporary_password: string
 }

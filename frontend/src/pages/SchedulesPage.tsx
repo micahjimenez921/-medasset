@@ -11,6 +11,7 @@ import { Card } from '../components/ui/Card'
 import ScheduleTable from '../components/schedules/ScheduleTable'
 import ScheduleFormModal from '../components/schedules/ScheduleFormModal'
 import type { ScheduleStatus } from '../api/types'
+import Can from '../components/auth/Can'
 
 const STATE_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -38,10 +39,12 @@ export default function SchedulesPage() {
         title="Maintenance schedules"
         subtitle="Calendar-based and runtime-based preventive maintenance for every asset"
         actions={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus size={16} />
-            New schedule
-          </Button>
+          <Can permission="schedule.manage">
+            <Button onClick={() => setShowForm(true)}>
+              <Plus size={16} />
+              New schedule
+            </Button>
+          </Can>
         }
       />
 

@@ -284,6 +284,7 @@ CREATE TABLE job_logs (
   job_name       VARCHAR(60)  NOT NULL,
   triggered_by   VARCHAR(40)  NOT NULL,
   alerts_created INT          NOT NULL DEFAULT 0,
+  run_by         VARCHAR(100) NULL,
   ran_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 

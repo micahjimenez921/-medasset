@@ -3,7 +3,8 @@
 -- Transactional stored procedures (all data changes go through these).
 -- Pattern: START TRANSACTION -> lock rows (FOR UPDATE) -> validate ->
 --          change data -> COMMIT.  Any error => ROLLBACK + RESIGNAL.
--- The acting user is read from @app_user (set by Django per request).
+-- The acting user comes from sp_require_permission (see 09): Django only sends
+-- @app_user_id from a validated session; the database looks up the name.
 -- =====================================================================
 USE medasset_db;
 
@@ -97,18 +98,20 @@ END$$
 CREATE PROCEDURE sp_daily_preventive_job()
 BEGIN
   DECLARE v_new INT DEFAULT 0;
+  SET @app_user = 'SYSTEM (scheduler)';   -- the event has no signed-in user
   CALL sp_evaluate_alerts(NULL, v_new);
-  INSERT INTO job_logs (job_name, triggered_by, alerts_created)
-  VALUES ('preventive_check', 'EVENT', v_new);
+  INSERT INTO job_logs (job_name, triggered_by, alerts_created, run_by)
+  VALUES ('preventive_check', 'EVENT', v_new, @app_user);
 END$$
 
 -- Called from the UI ("Run preventive check now")
 CREATE PROCEDURE sp_run_preventive_check()
 BEGIN
   DECLARE v_new INT DEFAULT 0;
+  CALL sp_require_permission('alert.run_check');
   CALL sp_evaluate_alerts(NULL, v_new);
-  INSERT INTO job_logs (job_name, triggered_by, alerts_created)
-  VALUES ('preventive_check', 'MANUAL', v_new);
+  INSERT INTO job_logs (job_name, triggered_by, alerts_created, run_by)
+  VALUES ('preventive_check', 'MANUAL', v_new, @app_user);
   SELECT v_new AS alerts_created, NOW() AS ran_at;
 END$$
 
@@ -122,6 +125,7 @@ CREATE PROCEDURE sp_register_asset(
 BEGIN
   DECLARE v_id INT;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('asset.create');
 
   START TRANSACTION;
   INSERT INTO assets (asset_tag, serial_number, model_id, supplier_id, current_location_id,
@@ -141,6 +145,7 @@ BEGIN
   DECLARE v_from INT;
   DECLARE v_exists INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('asset.transfer');
 
   START TRANSACTION;
   SELECT status, current_location_id INTO v_status, v_from
@@ -173,6 +178,7 @@ CREATE PROCEDURE sp_update_asset_status(
 BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('asset.update_status');
 
   IF p_new_status NOT IN ('In-Use','Repair') THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Use the decommission action to retire an asset.';
@@ -200,6 +206,7 @@ CREATE PROCEDURE sp_update_runtime(IN p_asset_id INT, IN p_runtime_hours DECIMAL
 BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('asset.update_status');
 
   START TRANSACTION;
   SELECT status INTO v_status FROM assets WHERE asset_id = p_asset_id FOR UPDATE;
@@ -217,6 +224,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE v_active_wo INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('asset.decommission');
 
   START TRANSACTION;
   SELECT status INTO v_status FROM assets WHERE asset_id = p_asset_id FOR UPDATE;
@@ -261,6 +269,7 @@ BEGIN
   DECLARE v_id INT;
   DECLARE v_new INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('schedule.manage');
 
   IF p_basis NOT IN ('CALENDAR','RUNTIME') THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Basis must be CALENDAR or RUNTIME.';
@@ -308,6 +317,7 @@ END$$
 CREATE PROCEDURE sp_toggle_schedule(IN p_schedule_id INT, IN p_active TINYINT)
 BEGIN
   DECLARE v_exists INT DEFAULT 0;
+  CALL sp_require_permission('schedule.manage');
   SELECT COUNT(*) INTO v_exists FROM maintenance_schedules WHERE schedule_id = p_schedule_id;
   IF v_exists = 0 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Schedule not found.';
@@ -319,6 +329,7 @@ END$$
 CREATE PROCEDURE sp_acknowledge_alert(IN p_alert_id INT)
 BEGIN
   DECLARE v_status VARCHAR(20);
+  CALL sp_require_permission('alert.acknowledge');
   SELECT status INTO v_status FROM maintenance_alerts WHERE alert_id = p_alert_id;
   IF v_status IS NULL THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Alert not found.';
@@ -344,6 +355,7 @@ BEGIN
   DECLARE v_id INT;
   DECLARE v_match INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.create');
 
   IF p_description IS NULL OR TRIM(p_description) = '' THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A work order description is required.';
@@ -380,6 +392,7 @@ CREATE PROCEDURE sp_assign_technician(
 BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.assign');
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;
@@ -402,6 +415,7 @@ CREATE PROCEDURE sp_start_work_order(IN p_work_order_id INT)
 BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.execute');
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;
@@ -423,6 +437,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE v_assigned INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.execute');
 
   IF p_hours IS NULL OR p_hours <= 0 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hours must be greater than zero.';
@@ -457,6 +472,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE v_stock INT;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.execute');
 
   IF p_quantity IS NULL OR p_quantity <= 0 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Quantity must be greater than zero.';
@@ -495,6 +511,7 @@ BEGIN
   DECLARE v_is_cal TINYINT(1);
   DECLARE v_hours DECIMAL(10,2);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.complete');
 
   START TRANSACTION;
   SELECT w.status, t.is_calibration INTO v_status, v_is_cal
@@ -533,6 +550,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE v_parts INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('workorder.cancel');
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;

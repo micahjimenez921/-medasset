@@ -18,11 +18,6 @@ from .db import call_proc
 # ---------------------------------------------------------------------
 # small helpers
 # ---------------------------------------------------------------------
-def current_user(request):
-    """Name written to the audit log (until real login is added)."""
-    return request.headers.get("X-User", "web.user")
-
-
 def query(request, name):
     """Query-string value, or None when missing/empty (procedures treat NULL as 'no filter')."""
     value = request.query_params.get(name)
@@ -45,7 +40,7 @@ class ActionView(APIView):
         if action not in self.actions:
             raise NotFound(f"Unknown action '{action}'.")
         proc, build_args = self.actions[action]
-        sets = call_proc(proc, [pk, *build_args(request.data)], current_user(request))
+        sets = call_proc(request, proc, [pk, *build_args(request.data)])
         return Response(first_row(sets))
 
 
@@ -54,7 +49,7 @@ class ActionView(APIView):
 # ---------------------------------------------------------------------
 class DashboardView(APIView):
     def get(self, request):
-        summary, by_department, attention = call_proc("sp_dashboard_summary")
+        summary, by_department, attention = call_proc(request, "sp_dashboard_summary")
         return Response({
             "summary": summary[0],
             "by_department": by_department,
@@ -64,7 +59,7 @@ class DashboardView(APIView):
 
 class LookupView(APIView):
     def get(self, request, name):
-        return Response(call_proc("sp_list_lookup", [name])[0])
+        return Response(call_proc(request, "sp_list_lookup", [name])[0])
 
 
 # ---------------------------------------------------------------------
@@ -72,7 +67,7 @@ class LookupView(APIView):
 # ---------------------------------------------------------------------
 class AssetListView(APIView):
     def get(self, request):
-        sets = call_proc("sp_list_assets", [
+        sets = call_proc(request, "sp_list_assets", [
             query(request, "status"),
             query(request, "department_id"),
             query(request, "search"),
@@ -81,17 +76,17 @@ class AssetListView(APIView):
 
     def post(self, request):
         d = request.data
-        sets = call_proc("sp_register_asset", [
+        sets = call_proc(request, "sp_register_asset", [
             d.get("asset_tag"), d.get("serial_number"), d.get("model_id"),
             d.get("supplier_id"), d.get("location_id"), d.get("purchase_date"),
             d.get("purchase_cost"), d.get("warranty_expiry"), d.get("runtime_hours"),
-        ], current_user(request))
+        ])
         return Response(first_row(sets), status=201)
 
 
 class AssetDetailView(APIView):
     def get(self, request, pk):
-        sets = call_proc("sp_get_asset", [pk])
+        sets = call_proc(request, "sp_get_asset", [pk])
         if not sets[0]:
             raise NotFound("Asset not found.")
         return Response({
@@ -117,7 +112,7 @@ class AssetActionView(ActionView):
 # ---------------------------------------------------------------------
 class WorkOrderListView(APIView):
     def get(self, request):
-        sets = call_proc("sp_list_work_orders", [
+        sets = call_proc(request, "sp_list_work_orders", [
             query(request, "status"),
             query(request, "asset_id"),
         ])
@@ -125,16 +120,16 @@ class WorkOrderListView(APIView):
 
     def post(self, request):
         d = request.data
-        sets = call_proc("sp_create_work_order", [
+        sets = call_proc(request, "sp_create_work_order", [
             d.get("asset_id"), d.get("type_id"), d.get("priority"),
             d.get("description"), d.get("scheduled_date"), d.get("alert_id"),
-        ], current_user(request))
+        ])
         return Response(first_row(sets), status=201)
 
 
 class WorkOrderDetailView(APIView):
     def get(self, request, pk):
-        sets = call_proc("sp_get_work_order", [pk])
+        sets = call_proc(request, "sp_get_work_order", [pk])
         if not sets[0]:
             raise NotFound("Work order not found.")
         return Response({
@@ -163,7 +158,7 @@ class WorkOrderActionView(ActionView):
 # ---------------------------------------------------------------------
 class AlertListView(APIView):
     def get(self, request):
-        return Response(call_proc("sp_list_alerts", [query(request, "status")])[0])
+        return Response(call_proc(request, "sp_list_alerts", [query(request, "status")])[0])
 
 
 class AlertActionView(ActionView):
@@ -175,21 +170,21 @@ class AlertActionView(ActionView):
 class RunPreventiveCheckView(APIView):
     """Manual trigger of the same check the daily database event performs."""
     def post(self, request):
-        return Response(first_row(call_proc("sp_run_preventive_check", [], current_user(request))))
+        return Response(first_row(call_proc(request, "sp_run_preventive_check", [])))
 
 
 class ScheduleListView(APIView):
     def get(self, request):
-        sets = call_proc("sp_list_schedules", [query(request, "asset_id"), query(request, "state")])
+        sets = call_proc(request, "sp_list_schedules", [query(request, "asset_id"), query(request, "state")])
         return Response(sets[0])
 
     def post(self, request):
         d = request.data
-        sets = call_proc("sp_create_schedule", [
+        sets = call_proc(request, "sp_create_schedule", [
             d.get("asset_id"), d.get("type_id"), d.get("basis"),
             d.get("interval_days"), d.get("interval_hours"),
             d.get("lead_days"), d.get("lead_hours"), d.get("last_performed"),
-        ], current_user(request))
+        ])
         return Response(first_row(sets), status=201)
 
 
@@ -204,20 +199,20 @@ class ScheduleActionView(ActionView):
 # ---------------------------------------------------------------------
 class AuditLogView(APIView):
     def get(self, request):
-        return Response(call_proc("sp_list_audit_logs", [
+        return Response(call_proc(request, "sp_list_audit_logs", [
             query(request, "table"), query(request, "limit"),
         ])[0])
 
 
 class JobLogView(APIView):
     def get(self, request):
-        return Response(call_proc("sp_list_job_logs", [query(request, "limit")])[0])
+        return Response(call_proc(request, "sp_list_job_logs", [query(request, "limit")])[0])
 
 
 class CostReportView(APIView):
     def get(self, request):
         by_department, by_category, by_type, top_assets, by_month = call_proc(
-            "sp_report_costs", [query(request, "year")]
+            request, "sp_report_costs", [query(request, "year")]
         )
         return Response({
             "by_department": by_department,

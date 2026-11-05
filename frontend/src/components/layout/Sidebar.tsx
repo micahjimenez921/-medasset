@@ -8,16 +8,20 @@ import {
   Package,
   ScrollText,
   TrendingUp,
+  Users,
 } from 'lucide-react'
+import { useAuth } from '../../auth/auth-context'
 
+// `permission` = the menu item is hidden for roles that do not have it
 const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/assets', label: 'Assets', icon: Package, end: false },
-  { to: '/work-orders', label: 'Work orders', icon: ClipboardList, end: false },
-  { to: '/alerts', label: 'Alerts', icon: BellRing, end: false },
-  { to: '/schedules', label: 'Schedules', icon: CalendarClock, end: false },
-  { to: '/reports', label: 'Reports', icon: TrendingUp, end: false },
-  { to: '/audit-log', label: 'Audit log', icon: ScrollText, end: false },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: 'dashboard.view' },
+  { to: '/assets', label: 'Assets', icon: Package, end: false, permission: 'asset.view' },
+  { to: '/work-orders', label: 'Work orders', icon: ClipboardList, end: false, permission: 'workorder.view' },
+  { to: '/alerts', label: 'Alerts', icon: BellRing, end: false, permission: 'alert.view' },
+  { to: '/schedules', label: 'Schedules', icon: CalendarClock, end: false, permission: 'schedule.view' },
+  { to: '/reports', label: 'Reports', icon: TrendingUp, end: false, permission: 'report.view' },
+  { to: '/audit-log', label: 'Audit log', icon: ScrollText, end: false, permission: 'audit.view' },
+  { to: '/users', label: 'Users', icon: Users, end: false, permission: 'user.manage' },
 ]
 
 interface SidebarProps {
@@ -26,6 +30,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
+  const { can } = useAuth()
   return (
     <>
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />}
@@ -46,7 +51,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {links.map(({ to, label, icon: Icon, end }) => (
+          {links.filter((l) => can(l.permission)).map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}

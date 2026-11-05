@@ -21,7 +21,12 @@ export function errorMessage(error: unknown): string {
 async function request<T>(method: 'GET' | 'POST', url: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api${url}`, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    credentials: 'same-origin', // the sign-in cookie is HttpOnly: the browser sends it, our code never sees it
+    headers: {
+      // required by the server on every change (blocks cross-site request forgery)
+      'X-Requested-With': 'MedAsset',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
@@ -36,6 +41,10 @@ async function request<T>(method: 'GET' | 'POST', url: string, body?: unknown): 
   if (!response.ok) {
     // Django sends {"detail": "..."}; for rule violations this is the stored procedure's own message.
     const detail = (data as { detail?: string } | null)?.detail
+    // session ended (timeout, signed out elsewhere): send the user to the sign-in page
+    if (response.status === 401 && !url.startsWith('/auth/login')) {
+      window.dispatchEvent(new Event('medasset:unauthorized'))
+    }
     throw new ApiError(detail ?? `Request failed (${response.status})`, response.status)
   }
 

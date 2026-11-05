@@ -12,6 +12,7 @@ import CostChart from '../components/dashboard/CostChart'
 import DepartmentChart from '../components/dashboard/DepartmentChart'
 import { formatNumber, formatPeso } from '../lib/format'
 import type { CostReport, DashboardData } from '../api/types'
+import Can from '../components/auth/Can'
 
 export default function DashboardPage() {
   const dashboard = useFetch<DashboardData>('/dashboard/')
@@ -52,10 +53,12 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle="Overview of your medical equipment and maintenance status"
         actions={
-          <Button onClick={runCheck} loading={running}>
-            <RefreshCw size={16} />
-            Run preventive check
-          </Button>
+          <Can permission="alert.run_check">
+            <Button onClick={runCheck} loading={running}>
+              <RefreshCw size={16} />
+              Run preventive check
+            </Button>
+          </Can>
         }
       />
 

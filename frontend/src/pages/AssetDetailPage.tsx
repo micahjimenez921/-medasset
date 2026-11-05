@@ -19,6 +19,7 @@ import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
 import WorkOrderTable from '../components/workorders/WorkOrderTable'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AssetDetail } from '../api/types'
+import Can from '../components/auth/Can'
 
 type ModalName = 'runtime' | 'transfer' | 'status' | 'decommission' | 'workorder' | null
 
@@ -73,21 +74,31 @@ export default function AssetDetailPage() {
             <StatusBadge value={asset.status} />
             {!retired && (
               <>
-                <Button onClick={() => setModal('workorder')}>
-                  <ClipboardPlus size={16} /> New work order
-                </Button>
-                <Button variant="secondary" onClick={() => setModal('runtime')}>
-                  <Gauge size={16} /> Runtime
-                </Button>
-                <Button variant="secondary" onClick={() => setModal('transfer')}>
-                  <ArrowRightLeft size={16} /> Transfer
-                </Button>
-                <Button variant="secondary" onClick={() => setModal('status')}>
-                  <Repeat size={16} /> Status
-                </Button>
-                <Button variant="danger" onClick={() => setModal('decommission')}>
-                  <Power size={16} /> Decommission
-                </Button>
+                <Can permission="workorder.create">
+                  <Button onClick={() => setModal('workorder')}>
+                    <ClipboardPlus size={16} /> New work order
+                  </Button>
+                </Can>
+                <Can permission="asset.update_status">
+                  <Button variant="secondary" onClick={() => setModal('runtime')}>
+                    <Gauge size={16} /> Runtime
+                  </Button>
+                </Can>
+                <Can permission="asset.transfer">
+                  <Button variant="secondary" onClick={() => setModal('transfer')}>
+                    <ArrowRightLeft size={16} /> Transfer
+                  </Button>
+                </Can>
+                <Can permission="asset.update_status">
+                  <Button variant="secondary" onClick={() => setModal('status')}>
+                    <Repeat size={16} /> Status
+                  </Button>
+                </Can>
+                <Can permission="asset.decommission">
+                  <Button variant="danger" onClick={() => setModal('decommission')}>
+                    <Power size={16} /> Decommission
+                  </Button>
+                </Can>
               </>
             )}
           </>

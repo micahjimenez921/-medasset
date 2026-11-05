@@ -5,7 +5,9 @@
 -- get explicit opened/started/completed dates so reports show a timeline.
 -- =====================================================================
 USE medasset_db;
-SET @app_user = 'seed.script';
+-- Must be run by a real, named administrator (never a script name):
+-- sp_assert_demo_ready sets @app_user_id/@app_user to the first Administrator.
+CALL sp_assert_demo_ready();
 
 -- ---------------------------------------------------------------------
 -- Departments & locations
@@ -107,7 +109,7 @@ CALL sp_create_schedule(6,1,'RUNTIME',NULL,500,14,50,NULL);
 
 -- WO A: corrective repair, ventilator MA-0002 (flow sensor replaced)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at)
-VALUES (2, 4, 'High', 'Flow sensor error alarm during ICU shift', 'nurse.icu', '2026-03-04 09:00:00');
+VALUES (2, 4, 'High', 'Flow sensor error alarm during ICU shift', @app_user, '2026-03-04 09:00:00');
 SELECT MAX(work_order_id) INTO @wo FROM work_orders;
 CALL sp_assign_technician(@wo, 1, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-03-04 10:00:00' WHERE work_order_id = @wo;
@@ -118,7 +120,7 @@ UPDATE work_orders SET status = 'Completed', completed_at = '2026-03-05 15:30:00
 
 -- WO B: corrective repair, monitor MA-0007 (battery replaced)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at)
-VALUES (7, 4, 'Medium', 'Monitor shuts down when unplugged', 'nurse.er', '2026-06-10 13:00:00');
+VALUES (7, 4, 'Medium', 'Monitor shuts down when unplugged', @app_user, '2026-06-10 13:00:00');
 SELECT MAX(work_order_id) INTO @wo FROM work_orders;
 CALL sp_assign_technician(@wo, 3, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-06-10 14:00:00' WHERE work_order_id = @wo;
@@ -129,7 +131,7 @@ UPDATE work_orders SET status = 'Completed', completed_at = '2026-06-10 17:00:00
 
 -- WO C: preventive maintenance, infusion pump MA-0009
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at, scheduled_date)
-VALUES (9, 1, 'Low', 'Routine preventive maintenance', 'bme.supervisor', '2026-04-14 08:00:00', '2026-04-15');
+VALUES (9, 1, 'Low', 'Routine preventive maintenance', @app_user, '2026-04-14 08:00:00', '2026-04-15');
 SELECT MAX(work_order_id) INTO @wo FROM work_orders;
 CALL sp_assign_technician(@wo, 4, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-04-15 09:00:00' WHERE work_order_id = @wo;
@@ -140,7 +142,7 @@ UPDATE work_orders SET status = 'Completed', completed_at = '2026-04-15 11:00:00
 
 -- WO D: calibration, ultrasound MA-0005 (with calibration log)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at, scheduled_date)
-VALUES (5, 2, 'Medium', 'Annual probe and image calibration', 'bme.supervisor', '2026-08-18 08:00:00', '2026-08-20');
+VALUES (5, 2, 'Medium', 'Annual probe and image calibration', @app_user, '2026-08-18 08:00:00', '2026-08-20');
 SELECT MAX(work_order_id) INTO @wo FROM work_orders;
 CALL sp_assign_technician(@wo, 2, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-08-20 09:00:00' WHERE work_order_id = @wo;
@@ -152,7 +154,7 @@ UPDATE work_orders SET status = 'Completed', completed_at = '2026-08-20 12:00:00
 
 -- WO E: corrective repair, X-ray MA-0010 (labor only)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at)
-VALUES (10, 4, 'Critical', 'X-ray tube not firing', 'rad.head', '2026-10-05 07:30:00');
+VALUES (10, 4, 'Critical', 'X-ray tube not firing', @app_user, '2026-10-05 07:30:00');
 SELECT MAX(work_order_id) INTO @wo FROM work_orders;
 CALL sp_assign_technician(@wo, 2, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-10-05 08:30:00' WHERE work_order_id = @wo;

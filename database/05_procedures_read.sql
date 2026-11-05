@@ -12,6 +12,7 @@ DELIMITER $$
 -- ---------------------------------------------------------------------
 CREATE PROCEDURE sp_list_lookup(IN p_name VARCHAR(30))
 BEGIN
+  CALL sp_require_permission('lookup.view');
   IF p_name = 'departments' THEN
     SELECT department_id, code, name FROM departments ORDER BY name;
   ELSEIF p_name = 'locations' THEN
@@ -48,6 +49,7 @@ END$$
 -- ---------------------------------------------------------------------
 CREATE PROCEDURE sp_dashboard_summary()
 BEGIN
+  CALL sp_require_permission('dashboard.view');
   SELECT
     (SELECT COUNT(*) FROM assets)                                         AS total_assets,
     (SELECT COUNT(*) FROM assets WHERE status = 'In-Use')                 AS in_use,
@@ -91,6 +93,7 @@ END$$
 CREATE PROCEDURE sp_list_assets(
   IN p_status VARCHAR(20), IN p_department_id INT, IN p_search VARCHAR(100))
 BEGIN
+  CALL sp_require_permission('asset.view');
   SELECT * FROM vw_asset_overview
    WHERE (p_status IS NULL OR p_status = '' OR status = p_status)
      AND (p_department_id IS NULL OR department_id = p_department_id)
@@ -105,6 +108,7 @@ END$$
 -- 5 result sets: asset, schedules, transfers, status history, work orders
 CREATE PROCEDURE sp_get_asset(IN p_asset_id INT)
 BEGIN
+  CALL sp_require_permission('asset.view');
   SELECT * FROM vw_asset_overview WHERE asset_id = p_asset_id;
 
   SELECT * FROM vw_schedule_status WHERE asset_id = p_asset_id ORDER BY type_name;
@@ -133,6 +137,7 @@ END$$
 -- ---------------------------------------------------------------------
 CREATE PROCEDURE sp_list_work_orders(IN p_status VARCHAR(20), IN p_asset_id INT)
 BEGIN
+  CALL sp_require_permission('workorder.view');
   SELECT * FROM vw_work_order_summary
    WHERE (p_status IS NULL OR p_status = ''
           OR (p_status = 'Active' AND status IN ('Open','Assigned','In Progress'))
@@ -146,6 +151,7 @@ END$$
 -- 4 result sets: header, labor, parts, calibration
 CREATE PROCEDURE sp_get_work_order(IN p_work_order_id INT)
 BEGIN
+  CALL sp_require_permission('workorder.view');
   SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
 
   SELECT x.assignment_id, x.technician_id, CONCAT(te.first_name, ' ', te.last_name) AS technician,
@@ -171,6 +177,7 @@ END$$
 -- ---------------------------------------------------------------------
 CREATE PROCEDURE sp_list_alerts(IN p_status VARCHAR(20))
 BEGIN
+  CALL sp_require_permission('alert.view');
   SELECT * FROM vw_alerts
    WHERE (p_status IS NULL OR p_status = ''
           OR (p_status = 'Active' AND status IN ('Open','Acknowledged'))
@@ -181,6 +188,7 @@ END$$
 
 CREATE PROCEDURE sp_list_schedules(IN p_asset_id INT, IN p_state VARCHAR(10))
 BEGIN
+  CALL sp_require_permission('schedule.view');
   SELECT * FROM vw_schedule_status
    WHERE (p_asset_id IS NULL OR asset_id = p_asset_id)
      AND (p_state IS NULL OR p_state = '' OR due_state = p_state)
@@ -193,6 +201,7 @@ END$$
 CREATE PROCEDURE sp_list_audit_logs(IN p_table VARCHAR(40), IN p_limit INT)
 BEGIN
   DECLARE v_limit INT;
+  CALL sp_require_permission('audit.view');
   SET v_limit = IF(p_limit IS NULL OR p_limit < 1 OR p_limit > 500, 100, p_limit);
   SELECT audit_id, table_name, record_id, action, old_values, new_values, changed_by, changed_at
     FROM audit_logs
@@ -204,8 +213,9 @@ END$$
 CREATE PROCEDURE sp_list_job_logs(IN p_limit INT)
 BEGIN
   DECLARE v_limit INT;
+  CALL sp_require_permission('audit.view');
   SET v_limit = IF(p_limit IS NULL OR p_limit < 1 OR p_limit > 200, 20, p_limit);
-  SELECT job_log_id, job_name, triggered_by, alerts_created, ran_at
+  SELECT job_log_id, job_name, triggered_by, alerts_created, run_by, ran_at
     FROM job_logs ORDER BY job_log_id DESC LIMIT v_limit;
 END$$
 
@@ -216,6 +226,7 @@ END$$
 CREATE PROCEDURE sp_report_costs(IN p_year INT)
 BEGIN
   DECLARE v_year INT;
+  CALL sp_require_permission('report.view');
   SET v_year = IFNULL(p_year, YEAR(CURDATE()));
 
   SELECT department, COUNT(*) AS work_orders,

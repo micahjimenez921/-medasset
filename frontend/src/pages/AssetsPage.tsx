@@ -11,6 +11,7 @@ import AssetFilters from '../components/assets/AssetFilters'
 import AssetTable from '../components/assets/AssetTable'
 import AssetFormModal from '../components/assets/AssetFormModal'
 import type { Asset, DepartmentOption } from '../api/types'
+import Can from '../components/auth/Can'
 
 export default function AssetsPage() {
   // filters live in the URL (?search=...&status=...&department_id=...) so links and the top-bar search work
@@ -68,10 +69,12 @@ export default function AssetsPage() {
         title="Assets"
         subtitle="Every medical device, its location and its operational status"
         actions={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus size={16} />
-            Register asset
-          </Button>
+          <Can permission="asset.create">
+            <Button onClick={() => setShowForm(true)}>
+              <Plus size={16} />
+              Register asset
+            </Button>
+          </Can>
         }
       />
 

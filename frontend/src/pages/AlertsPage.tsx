@@ -10,6 +10,7 @@ import RunCheckButton from '../components/alerts/RunCheckButton'
 import AlertList from '../components/alerts/AlertList'
 import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
 import type { AlertItem, MaintenanceTypeOption } from '../api/types'
+import Can from '../components/auth/Can'
 
 const STATUS_OPTIONS = [
   { value: 'Active', label: 'Active' },
@@ -58,7 +59,11 @@ export default function AlertsPage() {
             ? `${alerts.data.length} alert(s) shown${critical > 0 ? ` · ${critical} critical` : ''}. Alerts are raised by database triggers and the daily scheduled check.`
             : 'Preventive maintenance alerts'
         }
-        actions={<RunCheckButton onDone={alerts.reload} />}
+        actions={
+          <Can permission="alert.run_check">
+            <RunCheckButton onDone={alerts.reload} />
+          </Can>
+        }
       />
 
       <div className="mb-4">

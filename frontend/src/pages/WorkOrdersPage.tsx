@@ -11,6 +11,7 @@ import { Card } from '../components/ui/Card'
 import WorkOrderTable from '../components/workorders/WorkOrderTable'
 import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
 import type { WorkOrderSummary } from '../api/types'
+import Can from '../components/auth/Can'
 
 const STATUS_OPTIONS = [
   { value: 'Active', label: 'Active' },
@@ -52,10 +53,12 @@ export default function WorkOrdersPage() {
         title="Work orders"
         subtitle="Maintenance, calibration and repair jobs, with technicians, parts and costs"
         actions={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus size={16} />
-            New work order
-          </Button>
+          <Can permission="workorder.create">
+            <Button onClick={() => setShowForm(true)}>
+              <Plus size={16} />
+              New work order
+            </Button>
+          </Can>
         }
       />
 

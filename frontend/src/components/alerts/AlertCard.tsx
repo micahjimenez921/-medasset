@@ -3,6 +3,7 @@ import Button from '../ui/Button'
 import StatusBadge from '../ui/StatusBadge'
 import { formatDateTime } from '../../lib/format'
 import type { AlertItem } from '../../api/types'
+import Can from '../auth/Can'
 
 interface AlertCardProps {
   alert: AlertItem
@@ -42,9 +43,11 @@ export default function AlertCard({ alert: a, busy, onAcknowledge, onCreateWorkO
 
       <div className="flex shrink-0 items-center gap-2">
         {a.status === 'Open' && (
-          <Button variant="secondary" className="!px-3 !py-1.5" loading={busy} onClick={() => onAcknowledge(a)}>
-            Acknowledge
-          </Button>
+          <Can permission="alert.acknowledge">
+            <Button variant="secondary" className="!px-3 !py-1.5" loading={busy} onClick={() => onAcknowledge(a)}>
+              Acknowledge
+            </Button>
+          </Can>
         )}
 
         {a.work_order_id ? (
@@ -56,9 +59,11 @@ export default function AlertCard({ alert: a, busy, onAcknowledge, onCreateWorkO
           </Link>
         ) : (
           a.status !== 'Resolved' && (
-            <Button className="!px-3 !py-1.5" onClick={() => onCreateWorkOrder(a)}>
-              Create work order
-            </Button>
+            <Can permission="workorder.create">
+              <Button className="!px-3 !py-1.5" onClick={() => onCreateWorkOrder(a)}>
+                Create work order
+              </Button>
+            </Can>
           )
         )}
       </div>

@@ -22,6 +22,7 @@ import AddPartModal from '../components/workorders/AddPartModal'
 import CompleteWorkOrderModal from '../components/workorders/CompleteWorkOrderModal'
 import CancelWorkOrderModal from '../components/workorders/CancelWorkOrderModal'
 import type { WorkOrderDetail } from '../api/types'
+import Can from '../components/auth/Can'
 
 type ModalName = 'assign' | 'labor' | 'part' | 'complete' | 'cancel' | null
 
@@ -92,30 +93,40 @@ export default function WorkOrderDetailPage() {
             <StatusBadge value={wo.status} />
 
             {!closed && (
-              <Button variant="secondary" onClick={() => setModal('assign')}>
-                <UserPlus size={16} /> Assign
-              </Button>
+              <Can permission="workorder.assign">
+                <Button variant="secondary" onClick={() => setModal('assign')}>
+                  <UserPlus size={16} /> Assign
+                </Button>
+              </Can>
             )}
             {wo.status === 'Assigned' && (
-              <Button onClick={startWork} loading={starting}>
-                <Play size={16} /> Start work
-              </Button>
+              <Can permission="workorder.execute">
+                <Button onClick={startWork} loading={starting}>
+                  <Play size={16} /> Start work
+                </Button>
+              </Can>
             )}
             {wo.status === 'In Progress' && (
               <>
-                <Button variant="secondary" onClick={() => setModal('labor')}>
-                  <Clock size={16} /> Log labor
-                </Button>
-                <Button variant="secondary" onClick={() => setModal('part')}>
-                  <PackagePlus size={16} /> Add part
-                </Button>
-                <Button onClick={() => setModal('complete')}>Complete</Button>
+                <Can permission="workorder.execute">
+                  <Button variant="secondary" onClick={() => setModal('labor')}>
+                    <Clock size={16} /> Log labor
+                  </Button>
+                  <Button variant="secondary" onClick={() => setModal('part')}>
+                    <PackagePlus size={16} /> Add part
+                  </Button>
+                </Can>
+                <Can permission="workorder.complete">
+                  <Button onClick={() => setModal('complete')}>Complete</Button>
+                </Can>
               </>
             )}
             {!closed && (
-              <Button variant="danger" onClick={() => setModal('cancel')}>
-                Cancel
-              </Button>
+              <Can permission="workorder.cancel">
+                <Button variant="danger" onClick={() => setModal('cancel')}>
+                  Cancel
+                </Button>
+              </Can>
             )}
           </>
         }
