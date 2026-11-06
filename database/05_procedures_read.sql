@@ -28,11 +28,11 @@ BEGIN
       JOIN vendors v          ON v.vendor_id = m.manufacturer_id
      ORDER BY v.name, m.model_name;
   ELSEIF p_name = 'suppliers' THEN
-    SELECT vendor_id, name FROM vendors WHERE vendor_type IN ('Supplier','Service Provider') ORDER BY name;
+    SELECT vendor_id, name FROM vendors WHERE vendor_type = 'Supplier' ORDER BY name;
   ELSEIF p_name = 'technicians' THEN
     SELECT technician_id, employee_no, CONCAT(first_name, ' ', last_name) AS full_name,
-           specialization, hourly_rate, is_active
-      FROM technicians ORDER BY last_name, first_name;
+           specialization, team, hourly_rate, is_active
+      FROM technicians ORDER BY team, last_name, first_name;
   ELSEIF p_name = 'parts' THEN
     SELECT part_id, part_number, name, unit_cost, quantity_on_hand, reorder_level,
            (quantity_on_hand <= reorder_level) AS is_low_stock

@@ -38,7 +38,7 @@ export default function AssignTechnicianModal({ workOrderId, assignedIds, onClos
           <option value="">Select a technician...</option>
           {available.map((t) => (
             <option key={t.technician_id} value={t.technician_id}>
-              {t.full_name} · {t.specialization ?? 'General'} · {formatPeso(t.hourly_rate)}/h
+              {t.full_name} ({t.team}) · {formatPeso(t.hourly_rate)}/h
             </option>
           ))}
         </SelectInput>

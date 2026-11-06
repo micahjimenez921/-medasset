@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { HeartPulse, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { errorMessage } from '../api/client'
 import Button from '../components/ui/Button'
@@ -35,22 +35,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          <span className="rounded-lg bg-teal-700 p-2 text-white">
-            <HeartPulse size={24} />
-          </span>
-          <div>
-            <p className="text-xl font-bold leading-tight text-slate-900">MedAsset</p>
-            <p className="text-xs text-slate-500">Medical asset tracking and preventive service</p>
-          </div>
+    <div
+      className="relative flex min-h-screen items-center justify-center bg-teal-900 bg-cover bg-center p-4"
+      style={{ backgroundImage: "url('/login-bg.svg')" }}
+    >
+      {/* green tint so the form stays easy to read on top of the picture */}
+      <div className="absolute inset-0 bg-gradient-to-b from-teal-950/70 via-teal-900/40 to-teal-950/75" />
+
+      <div className="relative w-full max-w-sm">
+        <div className="mb-6 text-center text-white">
+          <img
+            src="/tdh-logo.png"
+            alt="Tuburan District Hospital seal"
+            className="mx-auto h-24 w-24 rounded-full bg-white p-1 shadow-lg ring-4 ring-gold-500"
+          />
+          <h1 className="mt-4 text-2xl font-bold tracking-tight drop-shadow">Tuburan District Hospital</h1>
+          <p className="mt-1 text-sm text-teal-100 drop-shadow">MedAsset · Medical asset tracking and preventive service</p>
         </div>
 
-        <form onSubmit={submit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+        <form onSubmit={submit} className="space-y-4 rounded-xl border border-white/60 bg-white/95 p-6 shadow-2xl backdrop-blur">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <Lock size={16} /> Sign in
-          </h1>
+          </h2>
           {error && (
             <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -79,7 +85,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-xs text-slate-500">
+        <p className="mt-4 text-center text-xs text-teal-100 drop-shadow">
           Authorized hospital staff only. Sign-ins and actions are recorded.
         </p>
       </div>

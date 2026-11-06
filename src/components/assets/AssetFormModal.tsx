@@ -23,6 +23,8 @@ const empty = {
   purchase_cost: '',
   warranty_expiry: '',
   runtime_hours: '0',
+  acquisition_type: 'Public bidding',
+  donor: '',
 }
 
 /** "Register asset" form. Saving calls sp_register_asset. */
@@ -53,6 +55,8 @@ export default function AssetFormModal({ onClose, onSaved }: AssetFormModalProps
         purchase_cost: Number(form.purchase_cost),
         warranty_expiry: form.warranty_expiry || null,
         runtime_hours: Number(form.runtime_hours || 0),
+        acquisition_type: form.acquisition_type,
+        donor: form.acquisition_type === 'Donation' ? form.donor.trim() : null,
       })
       toast.success(`Asset ${asset.asset_tag} registered.`)
       onSaved()
@@ -80,7 +84,7 @@ export default function AssetFormModal({ onClose, onSaved }: AssetFormModalProps
       }
     >
       <form id="asset-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <Field label="Asset tag" required hint="Hospital inventory tag, e.g. MA-0012">
+        <Field label="Asset tag" required hint="Hospital inventory tag, e.g. TDH-0018">
           <TextInput required value={form.asset_tag} onChange={(e) => set('asset_tag', e.target.value)} />
         </Field>
         <Field label="Serial number" required hint="Must be unique">
@@ -108,6 +112,25 @@ export default function AssetFormModal({ onClose, onSaved }: AssetFormModalProps
           </SelectInput>
         </Field>
 
+        <Field label="Acquired through" required hint="Public hospitals buy by competitive bidding or receive donations">
+          <SelectInput value={form.acquisition_type} onChange={(e) => set('acquisition_type', e.target.value)}>
+            <option value="Public bidding">Public bidding (R.A. 12009)</option>
+            <option value="Donation">Donation</option>
+          </SelectInput>
+        </Field>
+        {form.acquisition_type === 'Donation' ? (
+          <Field label="Donor" required>
+            <TextInput
+              required
+              value={form.donor}
+              placeholder="e.g. Ako Bisaya Partylist"
+              onChange={(e) => set('donor', e.target.value)}
+            />
+          </Field>
+        ) : (
+          <div className="hidden sm:block" />
+        )}
+
         <div className="sm:col-span-2">
           <Field label="Location" required>
             <SelectInput required value={form.location_id} onChange={(e) => set('location_id', e.target.value)}>
@@ -121,10 +144,10 @@ export default function AssetFormModal({ onClose, onSaved }: AssetFormModalProps
           </Field>
         </div>
 
-        <Field label="Purchase date" required>
+        <Field label={form.acquisition_type === 'Donation' ? 'Date received' : 'Purchase date'} required>
           <TextInput type="date" required value={form.purchase_date} onChange={(e) => set('purchase_date', e.target.value)} />
         </Field>
-        <Field label="Purchase cost (PHP)" required>
+        <Field label={form.acquisition_type === 'Donation' ? 'Declared value (PHP)' : 'Purchase cost (PHP)'} required>
           <TextInput
             type="number"
             min="0"

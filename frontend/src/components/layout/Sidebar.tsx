@@ -46,7 +46,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </span>
           <div>
             <p className="text-lg font-bold leading-tight">MedAsset</p>
-            <p className="text-[11px] leading-tight text-teal-200">Biomedical engineering</p>
           </div>
         </div>
 

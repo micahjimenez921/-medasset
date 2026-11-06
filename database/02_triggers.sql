@@ -306,7 +306,8 @@ BEGIN
   VALUES ('assets', NEW.asset_id, 'INSERT',
           JSON_OBJECT('asset_tag', NEW.asset_tag, 'serial_number', NEW.serial_number,
                       'status', NEW.status, 'location_id', NEW.current_location_id,
-                      'purchase_cost', NEW.purchase_cost, 'warranty_expiry', NEW.warranty_expiry),
+                      'purchase_cost', NEW.purchase_cost, 'warranty_expiry', NEW.warranty_expiry,
+                      'acquisition_type', NEW.acquisition_type, 'donor', NEW.donor),
           COALESCE(@app_user, CURRENT_USER()));
 END$$
 

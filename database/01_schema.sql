@@ -73,8 +73,11 @@ CREATE TABLE technicians (
   technician_id   INT AUTO_INCREMENT PRIMARY KEY,
   employee_no     VARCHAR(20)  NOT NULL,
   first_name      VARCHAR(60)  NOT NULL,
-  last_name       VARCHAR(60)  NOT NULL,
-  specialization  VARCHAR(80)  NULL,
+  last_name       VARCHAR(80)  NOT NULL,
+  specialization  VARCHAR(120) NULL,
+  -- who the technician works for (Tuburan District Hospital's tiered support system)
+  team            ENUM('In-house maintenance','Provincial engineering','Outsourced contractor','Manufacturer service')
+                  NOT NULL DEFAULT 'In-house maintenance',
   hourly_rate     DECIMAL(10,2) NOT NULL,
   email           VARCHAR(120) NULL,
   is_active       TINYINT(1)   NOT NULL DEFAULT 1,
@@ -105,6 +108,9 @@ CREATE TABLE assets (
   supplier_id         INT          NULL,
   current_location_id INT          NOT NULL,
   status              ENUM('In-Use','Repair','Decommissioned') NOT NULL DEFAULT 'In-Use',
+  -- public hospitals acquire assets by competitive bidding (R.A. 12009) or receive donations
+  acquisition_type    ENUM('Public bidding','Donation') NOT NULL DEFAULT 'Public bidding',
+  donor               VARCHAR(120) NULL,
   purchase_date       DATE         NOT NULL,
   purchase_cost       DECIMAL(12,2) NOT NULL,
   warranty_expiry     DATE         NULL,
@@ -117,6 +123,7 @@ CREATE TABLE assets (
   CONSTRAINT uq_assets_serial UNIQUE (serial_number),
   CONSTRAINT ck_assets_cost    CHECK (purchase_cost >= 0),
   CONSTRAINT ck_assets_runtime CHECK (runtime_hours >= 0),
+  CONSTRAINT ck_assets_donor CHECK (acquisition_type = 'Public bidding' OR donor IS NOT NULL),
   CONSTRAINT ck_assets_warranty CHECK (warranty_expiry IS NULL OR warranty_expiry >= purchase_date),
   CONSTRAINT fk_assets_model FOREIGN KEY (model_id)
     REFERENCES asset_models (model_id) ON DELETE RESTRICT ON UPDATE CASCADE,

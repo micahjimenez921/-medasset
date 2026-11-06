@@ -121,16 +121,26 @@ END$$
 CREATE PROCEDURE sp_register_asset(
   IN p_asset_tag VARCHAR(20), IN p_serial_number VARCHAR(60), IN p_model_id INT,
   IN p_supplier_id INT, IN p_location_id INT, IN p_purchase_date DATE,
-  IN p_purchase_cost DECIMAL(12,2), IN p_warranty_expiry DATE, IN p_runtime_hours DECIMAL(10,1))
+  IN p_purchase_cost DECIMAL(12,2), IN p_warranty_expiry DATE, IN p_runtime_hours DECIMAL(10,1),
+  IN p_acquisition_type VARCHAR(20), IN p_donor VARCHAR(120))
 BEGIN
   DECLARE v_id INT;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('asset.create');
 
+  IF IFNULL(p_acquisition_type, 'Public bidding') NOT IN ('Public bidding', 'Donation') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Acquisition must be Public bidding or Donation.';
+  END IF;
+  IF p_acquisition_type = 'Donation' AND (p_donor IS NULL OR TRIM(p_donor) = '') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Enter the donor for a donated asset.';
+  END IF;
+
   START TRANSACTION;
   INSERT INTO assets (asset_tag, serial_number, model_id, supplier_id, current_location_id,
-                      purchase_date, purchase_cost, warranty_expiry, runtime_hours)
+                      acquisition_type, donor, purchase_date, purchase_cost, warranty_expiry, runtime_hours)
   VALUES (p_asset_tag, p_serial_number, p_model_id, p_supplier_id, p_location_id,
+          IFNULL(p_acquisition_type, 'Public bidding'),
+          IF(p_acquisition_type = 'Donation', TRIM(p_donor), NULL),
           p_purchase_date, p_purchase_cost, p_warranty_expiry, IFNULL(p_runtime_hours, 0));
   SET v_id = LAST_INSERT_ID();
   COMMIT;

@@ -44,8 +44,9 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-teal-50 p-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <img src="/tdh-logo.png" alt="" className="mx-auto h-16 w-16" />
         <h1 className="flex items-center gap-2 text-base font-semibold text-slate-900">
           <KeyRound size={16} /> {forced ? 'Choose a new password' : 'Change password'}
         </h1>

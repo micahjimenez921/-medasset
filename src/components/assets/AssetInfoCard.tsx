@@ -9,9 +9,15 @@ export default function AssetInfoCard({ asset }: { asset: Asset }) {
     ['Category', `${asset.category} (class ${asset.risk_class})`],
     ['Manufacturer', asset.manufacturer],
     ['Supplier', asset.supplier ?? '—'],
+    [
+      'Acquired through',
+      asset.acquisition_type === 'Donation'
+        ? `Donation from ${asset.donor ?? 'unknown donor'}`
+        : 'Public bidding (R.A. 12009)',
+    ],
     ['Location', `${asset.department} · ${asset.room_name}`],
     ['Purchase date', `${formatDate(asset.purchase_date)} (${asset.age_years} yr old)`],
-    ['Purchase cost', formatPeso(asset.purchase_cost)],
+    [asset.acquisition_type === 'Donation' ? 'Declared value' : 'Purchase cost', formatPeso(asset.purchase_cost)],
     [
       'Warranty',
       <span key="w" className="inline-flex items-center gap-2">

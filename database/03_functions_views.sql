@@ -69,6 +69,7 @@ SELECT a.asset_id, a.asset_tag, a.serial_number, a.status,
        m.model_id, m.model_name, c.name AS category, c.risk_class,
        mf.name AS manufacturer, sp.name AS supplier,
        l.location_id, l.room_name, d.department_id, d.name AS department,
+       a.acquisition_type, a.donor,
        a.purchase_date, a.purchase_cost, a.warranty_expiry,
        CASE WHEN a.warranty_expiry IS NULL THEN 'None'
             WHEN a.warranty_expiry < CURDATE() THEN 'Expired'

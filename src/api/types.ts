@@ -71,6 +71,8 @@ export interface Asset {
   risk_class: string
   manufacturer: string
   supplier: string | null
+  acquisition_type: 'Public bidding' | 'Donation'
+  donor: string | null
   location_id: number
   room_name: string
   department_id: number
@@ -243,6 +245,7 @@ export interface TechnicianOption {
   employee_no: string
   full_name: string
   specialization: string | null
+  team: string
   hourly_rate: number
   is_active: number
 }
