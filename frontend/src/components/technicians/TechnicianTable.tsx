@@ -44,7 +44,7 @@ export default function TechnicianTable({ rows, onEdit }: TechnicianTableProps) 
         ),
       csv: (t) => t.username,
     },
-    { header: 'Rate', cell: (t) => `${formatPeso(t.hourly_rate)} / h`, className: 'text-right', csv: (t) => t.hourly_rate },
+    { header: 'Rate', cell: (t) => <span className="whitespace-nowrap">{formatPeso(t.hourly_rate)} / h</span>, className: 'text-right', csv: (t) => t.hourly_rate },
     { header: 'Active jobs', cell: (t) => t.active_jobs, className: 'text-right', csv: (t) => t.active_jobs },
     {
       header: 'Status',
