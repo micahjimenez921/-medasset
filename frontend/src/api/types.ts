@@ -71,6 +71,8 @@ export interface Asset {
   risk_class: string
   manufacturer: string
   supplier: string | null
+  acquisition_type: 'Public bidding' | 'Donation'
+  donor: string | null
   location_id: number
   room_name: string
   department_id: number
@@ -143,6 +145,7 @@ export interface WorkOrderSummary {
   status: 'Open' | 'Assigned' | 'In Progress' | 'Completed' | 'Cancelled'
   description: string
   resolution_notes: string | null
+  service_report_no: string | null
   created_by: string
   opened_at: string
   scheduled_date: string | null
@@ -198,6 +201,9 @@ export interface LaborLine {
   technician_id: number
   technician: string
   specialization: string | null
+  team: string
+  company: string | null
+  kind: 'Staff' | 'External'
   role: 'Lead' | 'Assistant'
   hours_worked: number
   hourly_rate: number
@@ -243,9 +249,48 @@ export interface TechnicianOption {
   employee_no: string
   full_name: string
   specialization: string | null
+  team: string
   hourly_rate: number
   is_active: number
+  company: string | null
+  kind: 'Staff' | 'External'
+  user_id: number | null
+  username: string | null
 }
+
+/** One row of the Technicians page (sp_list_technicians) */
+export interface TechnicianRow {
+  technician_id: number
+  employee_no: string
+  first_name: string
+  last_name: string
+  full_name: string
+  specialization: string | null
+  team: string
+  company: string | null
+  contact_number: string | null
+  email: string | null
+  hourly_rate: number
+  is_active: number
+  kind: 'Staff' | 'External'
+  user_id: number | null
+  username: string | null
+  active_jobs: number
+}
+
+export interface LinkableAccount {
+  user_id: number
+  username: string
+  full_name: string
+}
+
+export interface TechnicianListData {
+  technicians: TechnicianRow[]
+  available_accounts: LinkableAccount[]
+}
+
+export const STAFF_TEAMS = ['In-house maintenance', 'Provincial engineering'] as const
+export const EXTERNAL_TEAMS = ['Outsourced contractor', 'Manufacturer service'] as const
 
 export interface PartOption {
   part_id: number

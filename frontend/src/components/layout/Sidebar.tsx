@@ -3,11 +3,11 @@ import {
   BellRing,
   CalendarClock,
   ClipboardList,
-  HeartPulse,
   LayoutDashboard,
   Package,
   ScrollText,
   TrendingUp,
+  UserCog,
   Users,
 } from 'lucide-react'
 import { useAuth } from '../../auth/auth-context'
@@ -22,6 +22,7 @@ const links = [
   { to: '/reports', label: 'Reports', icon: TrendingUp, end: false, permission: 'report.view' },
   { to: '/audit-log', label: 'Audit log', icon: ScrollText, end: false, permission: 'audit.view' },
   { to: '/users', label: 'Users', icon: Users, end: false, permission: 'user.manage' },
+  { to: '/technicians', label: 'Technicians', icon: UserCog, end: false, permission: 'technician.manage' },
 ]
 
 interface SidebarProps {
@@ -41,11 +42,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         }`}
       >
         <div className="flex items-center gap-3 px-5 py-5">
-          <span className="rounded-lg bg-teal-700 p-2">
-            <HeartPulse size={22} />
-          </span>
+          <img src="/tdh-logo.png" alt="Tuburan District Hospital seal" className="h-11 w-11 shrink-0 rounded-full bg-white p-0.5 ring-2 ring-gold-500" />
           <div>
             <p className="text-lg font-bold leading-tight">MedAsset</p>
+            <p className="text-[11px] leading-tight text-gold-300">Tuburan District Hospital</p>
           </div>
         </div>
 

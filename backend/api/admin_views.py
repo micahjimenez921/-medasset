@@ -24,6 +24,8 @@ class UserListView(APIView):
         sets = call_proc(request, "sp_create_user", [
             username, d.get("full_name"), d.get("email"), d.get("role_id"),
             passwords.hash_password(temp),
+            # technician profile (only used when the role is Technician)
+            d.get("employee_no"), d.get("specialization"), d.get("team"), d.get("hourly_rate"),
         ])
         # the temporary password is shown ONCE, here; only its hash is stored
         return Response({**sets[0][0], "temporary_password": temp}, status=201)
@@ -58,3 +60,39 @@ class SecurityEventView(APIView):
         return Response(call_proc(request, "sp_list_security_events", [
             _query(request, "type"), _query(request, "limit"),
         ])[0])
+
+
+class TechnicianListView(APIView):
+    """Staff and external technicians. Permission 'technician.manage' is checked by the database."""
+
+    def get(self, request):
+        technicians, available_accounts = call_proc(request, "sp_list_technicians")
+        return Response({"technicians": technicians, "available_accounts": available_accounts})
+
+    def post(self, request):
+        d = request.data
+        if d.get("kind") == "staff":
+            # profile for an existing account that has the Technician role
+            sets = call_proc(request, "sp_create_staff_technician", [
+                d.get("user_id"), d.get("employee_no"), d.get("specialization"),
+                d.get("team"), d.get("hourly_rate"),
+            ])
+        else:
+            sets = call_proc(request, "sp_create_external_technician", [
+                d.get("employee_no"), d.get("first_name"), d.get("last_name"),
+                d.get("specialization"), d.get("team"), d.get("company"),
+                d.get("contact_number"), d.get("email"), d.get("hourly_rate"),
+            ])
+        return Response(sets[0][0], status=201)
+
+
+class TechnicianUpdateView(APIView):
+    def post(self, request, pk):
+        d = request.data
+        sets = call_proc(request, "sp_update_technician", [
+            pk, d.get("specialization"), d.get("company"), d.get("contact_number"),
+            d.get("email"), d.get("hourly_rate"),
+            1 if d.get("is_active", True) else 0,
+            d.get("user_id"),
+        ])
+        return Response(sets[0][0])

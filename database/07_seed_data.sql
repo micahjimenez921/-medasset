@@ -90,15 +90,18 @@ INSERT INTO maintenance_types (name, is_preventive, is_calibration) VALUES
  ('Corrective Repair',0,0);                           -- 6
 
 -- ---------------------------------------------------------------------
--- Technicians: the hospital's tiered support system (teams, not individuals)
+-- Technicians: the hospital's tiered support system.
+-- Staff = in-house maintenance and provincial engineering (a staff technician can have a
+-- sign-in account). External = outside contractors and manufacturer engineers (never sign in;
+-- hospital staff record their hours and their service report number).
 -- ---------------------------------------------------------------------
-INSERT INTO technicians (employee_no, first_name, last_name, specialization, team, hourly_rate) VALUES
- ('IFM-001','Building & Equipment','Maintenance Team','Daily checks, basic troubleshooting, generator and power lines','In-house maintenance',250.00),
- ('PHED-001','Capitol Provincial Health','Engineering Division','Systemic repairs, firmware updates, component overhauls','Provincial engineering',600.00),
- ('EXT-001','March Medical Equipment','Repair & Maintenance','Certified compliance checks and repairs','Outsourced contractor',550.00),
- ('EXT-002','Cebu Lab & Medical','Equipment Repair','Laboratory equipment calibration and repair','Outsourced contractor',520.00),
- ('MFR-001','Cebu RTK Marketing','Field Service Engineers','Authorized service for diagnostic equipment (warranty)','Manufacturer service',650.00),
- ('MFR-002','Cebu Medical Supply','Field Service Engineers','Authorized service for clinical equipment (warranty)','Manufacturer service',600.00);
+INSERT INTO technicians (employee_no, first_name, last_name, specialization, team, hourly_rate, company) VALUES
+ ('IFM-001','Building & Equipment','Maintenance Team','Daily checks, basic troubleshooting, generator and power lines','In-house maintenance',250.00,NULL),
+ ('PHED-001','Capitol Provincial Health','Engineering Division','Systemic repairs, firmware updates, component overhauls','Provincial engineering',600.00,NULL),
+ ('EXT-001','March Medical Equipment','Repair & Maintenance','Certified compliance checks and repairs','Outsourced contractor',550.00,'March Medical Equipment Repair and Maintenance Services'),
+ ('EXT-002','Cebu Lab & Medical','Equipment Repair','Laboratory equipment calibration and repair','Outsourced contractor',520.00,'Cebu Lab & Medical Equipment Repair'),
+ ('MFR-001','Cebu RTK Marketing','Field Service Engineers','Authorized service for diagnostic equipment (warranty)','Manufacturer service',650.00,'Cebu RTK Marketing Inc.'),
+ ('MFR-002','Cebu Medical Supply','Field Service Engineers','Authorized service for clinical equipment (warranty)','Manufacturer service',600.00,'Cebu Medical Supply Inc.');
 
 INSERT INTO parts (part_number, name, unit_cost, quantity_on_hand, reorder_level) VALUES
  ('LAB-CTF-01','Centrifuge carbon brush set',1200.00,6,3),
@@ -176,7 +179,8 @@ UPDATE work_orders SET status = 'In Progress', started_at = '2026-03-04 10:00:00
 CALL sp_log_labor_hours(@wo, 3, 3.00);
 CALL sp_add_part_to_work_order(@wo, 1, 1);
 UPDATE work_orders SET status = 'Completed', completed_at = '2026-03-05 15:30:00',
-       resolution_notes = 'Replaced carbon brush set, balanced rotor, run test passed.' WHERE work_order_id = @wo;
+       resolution_notes = 'Replaced carbon brush set, balanced rotor, run test passed.',
+       service_report_no = 'MM-SR-2026-031' WHERE work_order_id = @wo;
 
 -- WO B: corrective repair, ECG monitor TDH-0007 in the ER (lead wires replaced)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at)
@@ -210,7 +214,8 @@ CALL sp_log_labor_hours(@wo, 4, 3.00);
 INSERT INTO calibration_logs (work_order_id, calibrated_on, result, certificate_no, notes)
 VALUES (@wo, '2026-08-20', 'Pass', 'CAL-2026-0142', 'RPM and temperature within tolerance.');
 UPDATE work_orders SET status = 'Completed', completed_at = '2026-08-20 12:00:00',
-       resolution_notes = 'Calibration passed.' WHERE work_order_id = @wo;
+       resolution_notes = 'Calibration passed.',
+       service_report_no = 'CLM-SR-2026-088' WHERE work_order_id = @wo;
 
 -- WO E: corrective repair, digital X-ray TDH-0009 (labor only, manufacturer-authorized engineers)
 INSERT INTO work_orders (asset_id, type_id, priority, description, created_by, opened_at)
@@ -220,7 +225,8 @@ CALL sp_assign_technician(@wo, 6, 'Lead');
 UPDATE work_orders SET status = 'In Progress', started_at = '2026-10-05 08:30:00' WHERE work_order_id = @wo;
 CALL sp_log_labor_hours(@wo, 6, 6.00);
 UPDATE work_orders SET status = 'Completed', completed_at = '2026-10-06 10:00:00',
-       resolution_notes = 'Loose high-voltage connector reseated and tested.' WHERE work_order_id = @wo;
+       resolution_notes = 'Loose high-voltage connector reseated and tested.',
+       service_report_no = 'CMS-FSR-2026-117' WHERE work_order_id = @wo;
 
 -- ---------------------------------------------------------------------
 -- Active work orders (so the Work Orders page has live examples)

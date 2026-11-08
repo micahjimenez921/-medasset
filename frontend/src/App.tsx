@@ -14,6 +14,7 @@ import ComingSoonPage from './pages/ComingSoonPage'
 import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import UsersPage from './pages/UsersPage'
+import TechniciansPage from './pages/TechniciansPage'
 import RequireAuth from './components/auth/RequireAuth'
 import RequirePermission from './components/auth/RequirePermission'
 
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/reports" element={<Guard permission="report.view"><ReportsPage /></Guard>} />
           <Route path="/audit-log" element={<Guard permission="audit.view"><AuditLogPage /></Guard>} />
           <Route path="/users" element={<Guard permission="user.manage"><UsersPage /></Guard>} />
+          <Route path="/technicians" element={<Guard permission="technician.manage"><TechniciansPage /></Guard>} />
           <Route path="*" element={<ComingSoonPage title="Page not found" />} />
         </Route>
       </Route>

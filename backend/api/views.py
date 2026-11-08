@@ -80,6 +80,7 @@ class AssetListView(APIView):
             d.get("asset_tag"), d.get("serial_number"), d.get("model_id"),
             d.get("supplier_id"), d.get("location_id"), d.get("purchase_date"),
             d.get("purchase_cost"), d.get("warranty_expiry"), d.get("runtime_hours"),
+            d.get("acquisition_type") or "Public bidding", d.get("donor"),
         ])
         return Response(first_row(sets), status=201)
 
@@ -148,7 +149,8 @@ class WorkOrderActionView(ActionView):
         "part":     ("sp_add_part_to_work_order", lambda d: [d.get("part_id"), d.get("quantity")]),
         "complete": ("sp_complete_work_order",   lambda d: [d.get("resolution_notes"),
                                                             d.get("calibration_result"),
-                                                            d.get("certificate_no")]),
+                                                            d.get("certificate_no"),
+                                                            d.get("service_report_no")]),
         "cancel":   ("sp_cancel_work_order",     lambda d: [d.get("reason")]),
     }
 

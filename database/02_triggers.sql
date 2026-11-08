@@ -343,7 +343,8 @@ BEGIN
   VALUES ('work_orders', NEW.work_order_id, 'UPDATE',
           JSON_OBJECT('status', OLD.status, 'priority', OLD.priority),
           JSON_OBJECT('status', NEW.status, 'priority', NEW.priority,
-                      'resolution_notes', NEW.resolution_notes),
+                      'resolution_notes', NEW.resolution_notes,
+                      'service_report_no', NEW.service_report_no),
           COALESCE(@app_user, CURRENT_USER()));
 END$$
 

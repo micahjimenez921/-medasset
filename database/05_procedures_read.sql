@@ -30,9 +30,13 @@ BEGIN
   ELSEIF p_name = 'suppliers' THEN
     SELECT vendor_id, name FROM vendors WHERE vendor_type = 'Supplier' ORDER BY name;
   ELSEIF p_name = 'technicians' THEN
-    SELECT technician_id, employee_no, CONCAT(first_name, ' ', last_name) AS full_name,
-           specialization, team, hourly_rate, is_active
-      FROM technicians ORDER BY team, last_name, first_name;
+    SELECT t.technician_id, t.employee_no, CONCAT(t.first_name, ' ', t.last_name) AS full_name,
+           t.specialization, t.team, t.hourly_rate, t.is_active, t.company,
+           IF(t.team IN ('In-house maintenance','Provincial engineering'), 'Staff', 'External') AS kind,
+           t.user_id, u.username
+      FROM technicians t LEFT JOIN users u ON u.user_id = t.user_id
+     ORDER BY kind, FIELD(t.team,'In-house maintenance','Provincial engineering','Outsourced contractor','Manufacturer service'),
+              t.last_name, t.first_name;
   ELSEIF p_name = 'parts' THEN
     SELECT part_id, part_number, name, unit_cost, quantity_on_hand, reorder_level,
            (quantity_on_hand <= reorder_level) AS is_low_stock
@@ -155,7 +159,9 @@ BEGIN
   SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
 
   SELECT x.assignment_id, x.technician_id, CONCAT(te.first_name, ' ', te.last_name) AS technician,
-         te.specialization, x.role, x.hours_worked, x.hourly_rate, x.labor_cost, x.assigned_at
+         te.specialization, te.team, te.company,
+         IF(te.team IN ('In-house maintenance','Provincial engineering'), 'Staff', 'External') AS kind,
+         x.role, x.hours_worked, x.hourly_rate, x.labor_cost, x.assigned_at
     FROM work_order_assignments x
     JOIN technicians te ON te.technician_id = x.technician_id
    WHERE x.work_order_id = p_work_order_id
@@ -264,6 +270,32 @@ BEGIN
    WHERE status = 'Completed' AND YEAR(completed_at) = v_year
    GROUP BY MONTH(completed_at)
    ORDER BY month_no;
+END$$
+
+-- Technicians page: 2 result sets (all technicians, accounts that can still be linked)
+CREATE PROCEDURE sp_list_technicians()
+BEGIN
+  CALL sp_require_permission('technician.manage');
+
+  SELECT t.technician_id, t.employee_no, t.first_name, t.last_name,
+         CONCAT(t.first_name, ' ', t.last_name) AS full_name,
+         t.specialization, t.team, t.company, t.contact_number, t.email, t.hourly_rate, t.is_active,
+         IF(t.team IN ('In-house maintenance','Provincial engineering'), 'Staff', 'External') AS kind,
+         t.user_id, u.username,
+         (SELECT COUNT(*) FROM work_order_assignments x
+            JOIN work_orders w ON w.work_order_id = x.work_order_id
+           WHERE x.technician_id = t.technician_id
+             AND w.status IN ('Open','Assigned','In Progress')) AS active_jobs
+    FROM technicians t LEFT JOIN users u ON u.user_id = t.user_id
+   ORDER BY kind, FIELD(t.team,'In-house maintenance','Provincial engineering','Outsourced contractor','Manufacturer service'),
+            t.last_name, t.first_name;
+
+  -- Technician-role accounts that do not have a technician profile yet
+  SELECT u.user_id, u.username, u.full_name
+    FROM users u JOIN roles r ON r.role_id = u.role_id
+   WHERE r.name = 'Technician' AND u.is_active = 1
+     AND NOT EXISTS (SELECT 1 FROM technicians t WHERE t.user_id = u.user_id)
+   ORDER BY u.full_name;
 END$$
 
 DELIMITER ;

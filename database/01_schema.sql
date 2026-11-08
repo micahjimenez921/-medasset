@@ -80,6 +80,8 @@ CREATE TABLE technicians (
                   NOT NULL DEFAULT 'In-house maintenance',
   hourly_rate     DECIMAL(10,2) NOT NULL,
   email           VARCHAR(120) NULL,
+  company         VARCHAR(120) NULL,                 -- required for external technicians
+  contact_number  VARCHAR(40)  NULL,
   is_active       TINYINT(1)   NOT NULL DEFAULT 1,
   CONSTRAINT uq_technicians_empno UNIQUE (employee_no),
   CONSTRAINT ck_technicians_rate CHECK (hourly_rate >= 0)
@@ -199,6 +201,7 @@ CREATE TABLE work_orders (
   status           ENUM('Open','Assigned','In Progress','Completed','Cancelled') NOT NULL DEFAULT 'Open',
   description      VARCHAR(500) NOT NULL,
   resolution_notes VARCHAR(500) NULL,
+  service_report_no VARCHAR(60) NULL,                -- paperwork number from an external technician
   created_by       VARCHAR(100) NOT NULL,
   opened_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   scheduled_date   DATE         NULL,

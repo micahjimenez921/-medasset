@@ -13,6 +13,8 @@ urlpatterns = [
     path("users/", admin_views.UserListView.as_view()),
     path("users/<int:pk>/<str:action>/", admin_views.UserActionView.as_view()),
     path("roles/", admin_views.RoleListView.as_view()),
+    path("technicians/", admin_views.TechnicianListView.as_view()),
+    path("technicians/<int:pk>/update/", admin_views.TechnicianUpdateView.as_view()),
     path("security-events/", admin_views.SecurityEventView.as_view()),
 
     # dashboard + dropdown data

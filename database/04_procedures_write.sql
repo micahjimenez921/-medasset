@@ -410,6 +410,10 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Work order not found.';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM technicians WHERE technician_id = p_technician_id AND is_active = 1) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Choose an active technician.';
+  END IF;
+
   INSERT INTO work_order_assignments (work_order_id, technician_id, role)
   VALUES (p_work_order_id, p_technician_id, IFNULL(p_role, 'Lead'));
 
@@ -515,11 +519,13 @@ END$$
 
 CREATE PROCEDURE sp_complete_work_order(
   IN p_work_order_id INT, IN p_resolution_notes VARCHAR(500),
-  IN p_cal_result VARCHAR(10), IN p_certificate_no VARCHAR(60))
+  IN p_cal_result VARCHAR(10), IN p_certificate_no VARCHAR(60),
+  IN p_service_report_no VARCHAR(60))
 BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE v_is_cal TINYINT(1);
   DECLARE v_hours DECIMAL(10,2);
+  DECLARE v_external INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.complete');
 
@@ -540,6 +546,15 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Log labor hours before completing the work order.';
   END IF;
 
+  -- work done by an outside company must be backed by their service report
+  SELECT COUNT(*) INTO v_external
+    FROM work_order_assignments x JOIN technicians te ON te.technician_id = x.technician_id
+   WHERE x.work_order_id = p_work_order_id
+     AND te.team IN ('Outsourced contractor','Manufacturer service');
+  IF v_external > 0 AND (p_service_report_no IS NULL OR TRIM(p_service_report_no) = '') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Enter the service report number from the external technician.';
+  END IF;
+
   IF v_is_cal = 1 THEN
     IF p_cal_result IS NULL OR p_cal_result NOT IN ('Pass','Fail','Adjusted') THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Calibration result (Pass/Fail/Adjusted) is required.';
@@ -548,7 +563,9 @@ BEGIN
     VALUES (p_work_order_id, CURDATE(), p_cal_result, p_certificate_no, p_resolution_notes);
   END IF;
 
-  UPDATE work_orders SET status = 'Completed', resolution_notes = p_resolution_notes
+  UPDATE work_orders
+     SET status = 'Completed', resolution_notes = p_resolution_notes,
+         service_report_no = NULLIF(TRIM(p_service_report_no), '')
    WHERE work_order_id = p_work_order_id;
   COMMIT;
 
@@ -581,6 +598,141 @@ BEGIN
   COMMIT;
 
   SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+END$$
+
+-- ---------------------------------------------------------------------
+-- Technicians: staff (may sign in) and external (never sign in)
+-- ---------------------------------------------------------------------
+CREATE PROCEDURE sp_create_external_technician(
+  IN p_employee_no VARCHAR(20), IN p_first_name VARCHAR(60), IN p_last_name VARCHAR(80),
+  IN p_specialization VARCHAR(120), IN p_team VARCHAR(30), IN p_company VARCHAR(120),
+  IN p_contact VARCHAR(40), IN p_email VARCHAR(120), IN p_hourly_rate DECIMAL(10,2))
+BEGIN
+  DECLARE v_id INT;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('technician.manage');
+
+  IF p_team IS NULL OR p_team NOT IN ('Outsourced contractor','Manufacturer service') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'External team must be Outsourced contractor or Manufacturer service.';
+  END IF;
+  IF p_employee_no IS NULL OR TRIM(p_employee_no) = '' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technician number is required.';
+  END IF;
+  IF p_first_name IS NULL OR TRIM(p_first_name) = '' OR p_last_name IS NULL OR TRIM(p_last_name) = '' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'First and last name are required.';
+  END IF;
+  IF p_company IS NULL OR TRIM(p_company) = '' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Company is required for external technicians.';
+  END IF;
+  IF p_hourly_rate IS NULL OR p_hourly_rate < 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hourly rate must be zero or more.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM technicians WHERE employee_no = TRIM(p_employee_no)) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That technician number is already used.';
+  END IF;
+
+  START TRANSACTION;
+  INSERT INTO technicians (employee_no, first_name, last_name, specialization, team,
+                           company, contact_number, email, hourly_rate)
+  VALUES (TRIM(p_employee_no), TRIM(p_first_name), TRIM(p_last_name),
+          NULLIF(TRIM(p_specialization), ''), p_team, TRIM(p_company),
+          NULLIF(TRIM(p_contact), ''), NULLIF(TRIM(p_email), ''), p_hourly_rate);
+  SET v_id = LAST_INSERT_ID();
+  COMMIT;
+
+  SELECT technician_id, employee_no, CONCAT(first_name, ' ', last_name) AS full_name, team, company
+    FROM technicians WHERE technician_id = v_id;
+END$$
+
+-- Staff profile for an EXISTING account that has the Technician role
+CREATE PROCEDURE sp_create_staff_technician(
+  IN p_user_id INT, IN p_employee_no VARCHAR(20), IN p_specialization VARCHAR(120),
+  IN p_team VARCHAR(30), IN p_hourly_rate DECIMAL(10,2))
+BEGIN
+  DECLARE v_id INT;
+  DECLARE v_full VARCHAR(100);
+  DECLARE v_role VARCHAR(40);
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('technician.manage');
+
+  SELECT u.full_name, r.name INTO v_full, v_role
+    FROM users u JOIN roles r ON r.role_id = u.role_id WHERE u.user_id = p_user_id;
+  IF v_full IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User not found.';
+  END IF;
+  IF v_role <> 'Technician' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The account must have the Technician role.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM technicians WHERE user_id = p_user_id) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This account already has a technician profile.';
+  END IF;
+  IF p_team IS NULL OR p_team NOT IN ('In-house maintenance','Provincial engineering') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Staff team must be In-house maintenance or Provincial engineering.';
+  END IF;
+  IF p_employee_no IS NULL OR TRIM(p_employee_no) = '' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technician number is required.';
+  END IF;
+  IF p_hourly_rate IS NULL OR p_hourly_rate < 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hourly rate must be zero or more.';
+  END IF;
+  IF LOCATE(' ', TRIM(v_full)) = 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The account full name needs a first and a last name.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM technicians WHERE employee_no = TRIM(p_employee_no)) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That technician number is already used.';
+  END IF;
+
+  START TRANSACTION;
+  INSERT INTO technicians (employee_no, first_name, last_name, specialization, team, hourly_rate, user_id)
+  VALUES (TRIM(p_employee_no),
+          TRIM(SUBSTRING(TRIM(v_full), 1, LENGTH(TRIM(v_full)) - LENGTH(SUBSTRING_INDEX(TRIM(v_full), ' ', -1)))),
+          SUBSTRING_INDEX(TRIM(v_full), ' ', -1),
+          NULLIF(TRIM(p_specialization), ''), p_team, p_hourly_rate, p_user_id);
+  SET v_id = LAST_INSERT_ID();
+  COMMIT;
+
+  SELECT technician_id, employee_no, CONCAT(first_name, ' ', last_name) AS full_name, team
+    FROM technicians WHERE technician_id = v_id;
+END$$
+
+-- Edit rate / contact / activity, and link or unlink a staff account.
+-- Old work orders keep the rate that was saved when the hours were logged.
+CREATE PROCEDURE sp_update_technician(
+  IN p_technician_id INT, IN p_specialization VARCHAR(120), IN p_company VARCHAR(120),
+  IN p_contact VARCHAR(40), IN p_email VARCHAR(120), IN p_hourly_rate DECIMAL(10,2),
+  IN p_is_active TINYINT, IN p_user_id INT)
+BEGIN
+  DECLARE v_team VARCHAR(30);
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('technician.manage');
+
+  IF p_hourly_rate IS NULL OR p_hourly_rate < 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hourly rate must be zero or more.';
+  END IF;
+
+  START TRANSACTION;
+  SELECT team INTO v_team FROM technicians WHERE technician_id = p_technician_id FOR UPDATE;
+  IF v_team IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technician not found.';
+  END IF;
+  IF p_user_id IS NOT NULL AND EXISTS (
+       SELECT 1 FROM technicians WHERE user_id = p_user_id AND technician_id <> p_technician_id) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That account is already linked to another technician.';
+  END IF;
+
+  UPDATE technicians
+     SET specialization = NULLIF(TRIM(p_specialization), ''),
+         company        = NULLIF(TRIM(p_company), ''),
+         contact_number = NULLIF(TRIM(p_contact), ''),
+         email          = NULLIF(TRIM(p_email), ''),
+         hourly_rate    = p_hourly_rate,
+         is_active      = IFNULL(p_is_active, 1),
+         user_id        = p_user_id
+   WHERE technician_id = p_technician_id;
+  COMMIT;
+
+  SELECT technician_id, employee_no, CONCAT(first_name, ' ', last_name) AS full_name, team, is_active
+    FROM technicians WHERE technician_id = p_technician_id;
 END$$
 
 DELIMITER ;

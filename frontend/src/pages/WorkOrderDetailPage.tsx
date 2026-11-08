@@ -183,6 +183,7 @@ export default function WorkOrderDetailPage() {
           workOrderId={wo.work_order_id}
           isCalibration={wo.is_calibration === 1}
           isPreventive={preventive}
+          hasExternal={labor.some((l) => l.kind === 'External')}
           onClose={() => setModal(null)}
           onDone={reload}
         />

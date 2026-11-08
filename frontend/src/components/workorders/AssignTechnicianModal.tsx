@@ -21,6 +21,8 @@ export default function AssignTechnicianModal({ workOrderId, assignedIds, onClos
   const [role, setRole] = useState(assignedIds.length === 0 ? 'Lead' : 'Assistant')
 
   const available = (technicians.data ?? []).filter((t) => t.is_active && !assignedIds.includes(t.technician_id))
+  const staff = available.filter((t) => t.kind === 'Staff')
+  const external = available.filter((t) => t.kind === 'External')
 
   return (
     <ActionModal
@@ -36,11 +38,20 @@ export default function AssignTechnicianModal({ workOrderId, assignedIds, onClos
       <Field label="Technician" required>
         <SelectInput required value={technicianId} onChange={(e) => setTechnicianId(e.target.value)}>
           <option value="">Select a technician...</option>
-          {available.map((t) => (
-            <option key={t.technician_id} value={t.technician_id}>
-              {t.full_name} · {t.specialization ?? 'General'} · {formatPeso(t.hourly_rate)}/h
-            </option>
-          ))}
+          <optgroup label="Staff technicians">
+            {staff.map((t) => (
+              <option key={t.technician_id} value={t.technician_id}>
+                {t.full_name} ({t.team}) · {formatPeso(t.hourly_rate)}/h
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="External technicians">
+            {external.map((t) => (
+              <option key={t.technician_id} value={t.technician_id}>
+                {t.full_name} · {t.company} · {formatPeso(t.hourly_rate)}/h
+              </option>
+            ))}
+          </optgroup>
         </SelectInput>
       </Field>
 

@@ -22,6 +22,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 - **Work orders:** Open, Assigned, In Progress, Completed or Cancelled. Triggers enforce the workflow, move the asset to *Repair* and back, and roll schedules forward.
 - **Cost tracking:** labor and parts cost are snapshotted so past reports never change. Reports cover cost by month, department and category, and preventive versus corrective work.
 - **Audit logs:** triggers record old and new values with the real user name. Audit and security tables are append-only.
+- **Staff and external technicians:** staff technicians (in-house and provincial engineering) can have a sign-in account; external technicians (contractors and manufacturer engineers) never sign in. Work done by an external technician needs the company's service report number before it can be completed.
 - **Role-based access control:** three roles (Administrator, Technician, Viewer). Permissions are rows in the database and are enforced inside the stored procedures.
 - **Secure sign-in:** PBKDF2 password hashing, server-side sessions with idle and absolute timeouts, 5-failed-attempt lock-out, and forced password change on temporary passwords.
 - **Least-privilege database account:** the web app connects as `medasset_app`, which can only `EXECUTE` stored procedures.
@@ -31,8 +32,8 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 | Object | Count | Examples |
 |---|---|---|
 | Tables | 25 | `assets`, `maintenance_schedules`, `work_orders`, `audit_logs`, `users`, `roles`, `permissions` |
-| Triggers | 43 | status and transfer history, runtime alerts, work-order workflow, audit logging, append-only guards |
-| Stored procedures | 47 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
+| Triggers | 48 | status and transfer history, runtime alerts, work-order workflow, audit logging, append-only guards |
+| Stored procedures | 51 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
 | Functions | 4 | `fn_work_order_labor_cost`, `fn_work_order_parts_cost`, `fn_asset_total_cost`, `fn_schedule_state` |
 | Views | 4 | `vw_asset_overview`, `vw_work_order_summary`, `vw_schedule_status`, `vw_alerts` |
 | Scheduled event | 1 | `evt_daily_preventive_check` (daily at 06:00) |
@@ -42,7 +43,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 | Role | Typical user | Can do |
 |---|---|---|
 | Administrator | Biomedical/IT admin, asset manager | Everything, including user management and audit trail |
-| Technician | In-house, provincial or contractor technicians | Register and transfer assets, update status and runtime, manage schedules and alerts, run work orders. Cannot decommission, cancel work orders, view reports or audit, or manage users |
+| Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | Register and transfer assets, update status and runtime, manage schedules and alerts, run work orders. Cannot decommission, cancel work orders, view reports or audit, or manage users |
 | Viewer | Department heads, finance, quality and auditors | Read-only access, including reports and audit trail |
 
 See [SECURITY.md](SECURITY.md) for the full list of controls and known limits.
@@ -147,7 +148,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and sign in with the administrator account. Create Technician and Viewer users from the **Users** page. The temporary password is shown once and must be changed at first sign-in.
+Open http://localhost:5173 and sign in with the administrator account. Create Technician and Viewer users from the **Users** page (a Technician account also needs a technician number, team and hourly rate, and appears in the work-order assignment list). Manage external technicians on the **Technicians** page. The temporary password is shown once and must be changed at first sign-in.
 
 Optional: save a hospital photo as `frontend/public/hospital.jpg` for the sign-in page.
 

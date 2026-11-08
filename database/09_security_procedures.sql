@@ -216,10 +216,14 @@ END$$
 
 CREATE PROCEDURE sp_create_user(
   IN p_username VARCHAR(50), IN p_full_name VARCHAR(100), IN p_email VARCHAR(120),
-  IN p_role_id INT, IN p_password_hash VARCHAR(255))
+  IN p_role_id INT, IN p_password_hash VARCHAR(255),
+  IN p_employee_no VARCHAR(20), IN p_specialization VARCHAR(120),
+  IN p_team VARCHAR(30), IN p_hourly_rate DECIMAL(10,2))
 BEGIN
   DECLARE v_id INT;
   DECLARE v_name VARCHAR(50);
+  DECLARE v_is_tech TINYINT(1) DEFAULT 0;
+  DECLARE v_full VARCHAR(100);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('user.manage');
 
@@ -237,10 +241,40 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That username is already taken.';
   END IF;
 
+  -- a Technician account always gets a staff technician profile in the same step
+  SET v_full = TRIM(p_full_name);
+  SELECT (name = 'Technician') INTO v_is_tech FROM roles WHERE role_id = p_role_id;
+  IF v_is_tech = 1 THEN
+    IF LOCATE(' ', v_full) = 0 THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A technician needs a first and a last name.';
+    END IF;
+    IF p_employee_no IS NULL OR TRIM(p_employee_no) = '' THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technician number is required.';
+    END IF;
+    IF p_team IS NULL OR p_team NOT IN ('In-house maintenance','Provincial engineering') THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Staff team must be In-house maintenance or Provincial engineering.';
+    END IF;
+    IF p_hourly_rate IS NULL OR p_hourly_rate < 0 THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hourly rate must be zero or more.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM technicians WHERE employee_no = TRIM(p_employee_no)) THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That technician number is already used.';
+    END IF;
+  END IF;
+
   START TRANSACTION;
   INSERT INTO users (username, full_name, email, role_id, password_hash, must_change_password, created_by)
   VALUES (v_name, TRIM(p_full_name), NULLIF(TRIM(p_email), ''), p_role_id, p_password_hash, 1, @app_user);
   SET v_id = LAST_INSERT_ID();
+  IF v_is_tech = 1 THEN
+    INSERT INTO technicians (employee_no, first_name, last_name, specialization, team,
+                             hourly_rate, email, user_id)
+    VALUES (TRIM(p_employee_no),
+            TRIM(SUBSTRING(v_full, 1, LENGTH(v_full) - LENGTH(SUBSTRING_INDEX(v_full, ' ', -1)))),
+            SUBSTRING_INDEX(v_full, ' ', -1),
+            NULLIF(TRIM(p_specialization), ''), p_team, p_hourly_rate,
+            NULLIF(TRIM(p_email), ''), v_id);
+  END IF;
   CALL sp_log_security_event('USER_CREATED', v_id, v_name, @app_user, 'New account (temporary password)');
   COMMIT;
 
@@ -287,10 +321,19 @@ BEGIN
     END IF;
   END IF;
 
+  IF p_role_id <> v_old_role AND EXISTS (SELECT 1 FROM technicians WHERE user_id = p_user_id) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This account is linked to a technician profile. Unlink it on the Technicians page before changing the role.';
+  END IF;
+
   UPDATE users
      SET full_name = TRIM(p_full_name), email = NULLIF(TRIM(p_email), ''),
          role_id = p_role_id, is_active = IFNULL(p_is_active, 1)
    WHERE user_id = p_user_id;
+
+  -- a deactivated account must not stay assignable to new work orders
+  IF IFNULL(p_is_active,1) <> v_old_active THEN
+    UPDATE technicians SET is_active = IFNULL(p_is_active, 1) WHERE user_id = p_user_id;
+  END IF;
 
   IF p_role_id <> v_old_role THEN
     CALL sp_log_security_event('ROLE_CHANGED', p_user_id, v_name, @app_user,

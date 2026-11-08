@@ -4,7 +4,7 @@
 | Role | Can | Cannot |
 |---|---|---|
 | Administrator | everything, incl. users and audit trail | - |
-| Technician | register/transfer assets, status & runtime, schedules, alerts, run work orders (assign, start, labor, parts, complete) | decommission, cancel work orders, cost reports, audit log, users |
+| Technician (staff only; external technicians never sign in) | register/transfer assets, status & runtime, schedules, alerts, run work orders (assign, start, labor, parts, complete) | decommission, cancel work orders, cost reports, audit log, users |
 | Viewer | read-only: dashboard, assets, work orders, schedules, alerts, reports, audit trail | any change |
 
 The full matrix is shown in the app: Audit log > Roles & permissions.

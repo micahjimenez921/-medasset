@@ -9,8 +9,10 @@ const columns: Column<LaborLine>[] = [
     header: 'Technician',
     cell: (l) => (
       <div>
-        <p className="font-medium text-slate-900">{l.technician}</p>
-        <p className="text-xs text-slate-500">{l.specialization ?? '—'}</p>
+        <p className="font-medium text-slate-900">
+          {l.technician} <Badge tone={l.kind === 'External' ? 'amber' : 'green'}>{l.kind}</Badge>
+        </p>
+        <p className="text-xs text-slate-500">{l.kind === 'External' ? l.company : l.team}</p>
       </div>
     ),
   },

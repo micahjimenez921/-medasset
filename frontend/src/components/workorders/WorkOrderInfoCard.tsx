@@ -21,6 +21,7 @@ export default function WorkOrderInfoCard({ wo }: { wo: WorkOrderSummary }) {
     ['Scheduled for', formatDate(wo.scheduled_date)],
     ['Started', formatDateTime(wo.started_at)],
     ['Closed', formatDateTime(wo.completed_at)],
+    ...(wo.service_report_no ? ([['Service report no.', wo.service_report_no]] as [string, ReactNode][]) : []),
   ]
 
   return (

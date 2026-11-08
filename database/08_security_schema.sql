@@ -58,6 +58,14 @@ CREATE TABLE users (
   CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (role_id)
 ) ENGINE=InnoDB;
 
+-- A staff technician may sign in; the account is linked to the technician record.
+-- External technicians (contractors, manufacturer engineers) never have an account.
+ALTER TABLE technicians
+  ADD COLUMN user_id INT NULL,
+  ADD CONSTRAINT uq_technicians_user UNIQUE (user_id),
+  ADD CONSTRAINT fk_technicians_user FOREIGN KEY (user_id)
+      REFERENCES users (user_id) ON DELETE RESTRICT ON UPDATE CASCADE;
+
 CREATE TABLE user_sessions (
   session_id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id             INT          NOT NULL,
@@ -117,7 +125,8 @@ INSERT INTO permissions (code, category, description) VALUES
  ('workorder.cancel',    'Work orders', 'Cancel a work order'),
  ('report.view',         'Reports',     'View cost reports'),
  ('audit.view',          'Compliance',  'View the audit log, job runs and security events'),
- ('user.manage',         'Compliance',  'Create users, change roles, reset passwords, unlock accounts');
+ ('user.manage',         'Compliance',  'Create users, change roles, reset passwords, unlock accounts'),
+ ('technician.manage',   'Work orders', 'Add external technicians, edit rates, link staff accounts');
 
 -- Written by the installer, so the audit trail says so (not "root@localhost")
 SET @app_user = 'SYSTEM (install)';
@@ -237,6 +246,77 @@ BEGIN
           JSON_OBJECT('role_id', OLD.role_id,
                       'permission', (SELECT code FROM permissions WHERE permission_id = OLD.permission_id)),
           COALESCE(@app_user, CURRENT_USER()));
+END$$
+
+-- ---------------------------------------------------------------------
+-- Triggers: technician rules (staff vs external) and audit
+-- ---------------------------------------------------------------------
+CREATE TRIGGER trg_technicians_bi_rules BEFORE INSERT ON technicians FOR EACH ROW
+BEGIN
+  IF NEW.team IN ('Outsourced contractor','Manufacturer service') THEN
+    IF NEW.user_id IS NOT NULL THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'External technicians cannot have a sign-in account.';
+    END IF;
+    IF NEW.company IS NULL OR TRIM(NEW.company) = '' THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Company is required for external technicians.';
+    END IF;
+  END IF;
+  IF NEW.user_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM users u JOIN roles r ON r.role_id = u.role_id
+        WHERE u.user_id = NEW.user_id AND r.name = 'Technician') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an account with the Technician role can be linked to a technician.';
+  END IF;
+END$$
+
+CREATE TRIGGER trg_technicians_bu_rules BEFORE UPDATE ON technicians FOR EACH ROW
+BEGIN
+  IF NEW.team IN ('Outsourced contractor','Manufacturer service') THEN
+    IF NEW.user_id IS NOT NULL THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'External technicians cannot have a sign-in account.';
+    END IF;
+    IF NEW.company IS NULL OR TRIM(NEW.company) = '' THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Company is required for external technicians.';
+    END IF;
+  END IF;
+  IF NEW.user_id IS NOT NULL AND NOT (NEW.user_id <=> OLD.user_id) AND NOT EXISTS (
+       SELECT 1 FROM users u JOIN roles r ON r.role_id = u.role_id
+        WHERE u.user_id = NEW.user_id AND r.name = 'Technician') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an account with the Technician role can be linked to a technician.';
+  END IF;
+END$$
+
+CREATE TRIGGER trg_technicians_bd_block BEFORE DELETE ON technicians FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technicians cannot be deleted. Mark the technician inactive instead.';
+END$$
+
+CREATE TRIGGER trg_technicians_ai_audit AFTER INSERT ON technicians FOR EACH ROW
+BEGIN
+  INSERT INTO audit_logs (table_name, record_id, action, new_values, changed_by)
+  VALUES ('technicians', NEW.technician_id, 'INSERT',
+          JSON_OBJECT('employee_no', NEW.employee_no, 'name', CONCAT(NEW.first_name, ' ', NEW.last_name),
+                      'team', NEW.team, 'company', NEW.company, 'hourly_rate', NEW.hourly_rate,
+                      'user_id', NEW.user_id),
+          COALESCE(@app_user, CURRENT_USER()));
+END$$
+
+CREATE TRIGGER trg_technicians_au_audit AFTER UPDATE ON technicians FOR EACH ROW
+BEGIN
+  IF NOT (NEW.hourly_rate <=> OLD.hourly_rate AND NEW.is_active <=> OLD.is_active
+          AND NEW.user_id <=> OLD.user_id AND NEW.company <=> OLD.company
+          AND NEW.team <=> OLD.team AND NEW.specialization <=> OLD.specialization
+          AND NEW.contact_number <=> OLD.contact_number AND NEW.email <=> OLD.email
+          AND NEW.first_name <=> OLD.first_name AND NEW.last_name <=> OLD.last_name) THEN
+    INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, changed_by)
+    VALUES ('technicians', NEW.technician_id, 'UPDATE',
+            JSON_OBJECT('name', CONCAT(OLD.first_name, ' ', OLD.last_name), 'team', OLD.team,
+                        'company', OLD.company, 'hourly_rate', OLD.hourly_rate,
+                        'is_active', OLD.is_active, 'user_id', OLD.user_id),
+            JSON_OBJECT('name', CONCAT(NEW.first_name, ' ', NEW.last_name), 'team', NEW.team,
+                        'company', NEW.company, 'hourly_rate', NEW.hourly_rate,
+                        'is_active', NEW.is_active, 'user_id', NEW.user_id),
+            COALESCE(@app_user, CURRENT_USER()));
+  END IF;
 END$$
 
 DELIMITER ;

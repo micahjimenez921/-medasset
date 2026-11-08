@@ -7,6 +7,8 @@ interface CompleteWorkOrderModalProps {
   workOrderId: number
   isCalibration: boolean
   isPreventive: boolean
+  /** true when an external technician (contractor / manufacturer) worked on this job */
+  hasExternal: boolean
   onClose: () => void
   onDone: () => void
 }
@@ -19,12 +21,14 @@ export default function CompleteWorkOrderModal({
   workOrderId,
   isCalibration,
   isPreventive,
+  hasExternal,
   onClose,
   onDone,
 }: CompleteWorkOrderModalProps) {
   const [notes, setNotes] = useState('')
   const [result, setResult] = useState('Pass')
   const [certificate, setCertificate] = useState('')
+  const [serviceReport, setServiceReport] = useState('')
 
   return (
     <ActionModal
@@ -37,6 +41,7 @@ export default function CompleteWorkOrderModal({
           resolution_notes: notes.trim(),
           calibration_result: isCalibration ? result : null,
           certificate_no: isCalibration ? certificate.trim() || null : null,
+          service_report_no: hasExternal ? serviceReport.trim() : null,
         })
         onDone()
         return isPreventive
@@ -47,6 +52,16 @@ export default function CompleteWorkOrderModal({
       <Field label="Resolution notes" required hint="What was found and what was done?">
         <TextArea required value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
+
+      {hasExternal && (
+        <Field
+          label="Service report number"
+          required
+          hint="From the paperwork of the external technician. It links this record to their invoice."
+        >
+          <TextInput required value={serviceReport} onChange={(e) => setServiceReport(e.target.value)} placeholder="e.g. MM-SR-2026-040" />
+        </Field>
+      )}
 
       {isCalibration && (
         <div className="grid gap-4 sm:grid-cols-2">
