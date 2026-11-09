@@ -59,6 +59,43 @@ BEGIN
   RETURN 'OK';
 END$$
 
+-- Does the signed-in user (session variable @app_user_id) hold this permission?
+CREATE FUNCTION fn_has_permission(p_code VARCHAR(40))
+RETURNS TINYINT(1)
+READS SQL DATA
+BEGIN
+  DECLARE v_count INT DEFAULT 0;
+  SELECT COUNT(*) INTO v_count
+    FROM users u
+    JOIN role_permissions rp ON rp.role_id = u.role_id
+    JOIN permissions p       ON p.permission_id = rp.permission_id
+   WHERE u.user_id = @app_user_id AND p.code = p_code;
+  RETURN v_count > 0;
+END$$
+
+-- A user may open a work order when they can see all of them (Administrator, Viewer),
+-- or they are assigned to it, or they opened it themselves (Technician).
+CREATE FUNCTION fn_can_access_work_order(p_work_order_id INT)
+RETURNS TINYINT(1)
+READS SQL DATA
+BEGIN
+  DECLARE v_count INT DEFAULT 0;
+  IF fn_has_permission('workorder.view_all') THEN
+    RETURN 1;
+  END IF;
+  SELECT COUNT(*) INTO v_count
+    FROM work_order_assignments x
+    JOIN technicians t ON t.technician_id = x.technician_id
+   WHERE x.work_order_id = p_work_order_id AND t.user_id = @app_user_id;
+  IF v_count > 0 THEN
+    RETURN 1;
+  END IF;
+  SELECT COUNT(*) INTO v_count
+    FROM work_orders w
+   WHERE w.work_order_id = p_work_order_id AND w.created_by = @app_user;
+  RETURN v_count > 0;
+END$$
+
 DELIMITER ;
 
 -- ---------------------------------------------------------------------
@@ -70,7 +107,9 @@ SELECT a.asset_id, a.asset_tag, a.serial_number, a.status,
        mf.name AS manufacturer, sp.name AS supplier,
        l.location_id, l.room_name, d.department_id, d.name AS department,
        a.acquisition_type, a.donor,
-       a.purchase_date, a.purchase_cost, a.warranty_expiry,
+       a.purchase_date,
+       IF(fn_has_permission('report.view'), a.purchase_cost, NULL) AS purchase_cost,
+       a.warranty_expiry,
        CASE WHEN a.warranty_expiry IS NULL THEN 'None'
             WHEN a.warranty_expiry < CURDATE() THEN 'Expired'
             WHEN a.warranty_expiry <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 'Expiring'
@@ -78,7 +117,7 @@ SELECT a.asset_id, a.asset_tag, a.serial_number, a.status,
        a.runtime_hours,
        TIMESTAMPDIFF(YEAR, a.purchase_date, CURDATE()) AS age_years,
        a.decommissioned_at, a.decommission_reason,
-       fn_asset_total_cost(a.asset_id) AS lifetime_maintenance_cost,
+       IF(fn_has_permission('report.view'), fn_asset_total_cost(a.asset_id), NULL) AS lifetime_maintenance_cost,
        (SELECT COUNT(*)
           FROM maintenance_alerts al
           JOIN maintenance_schedules s ON s.schedule_id = al.schedule_id
@@ -143,3 +182,15 @@ SELECT al.alert_id, al.schedule_id, s.asset_id, a.asset_tag, m.model_name,
   JOIN locations l             ON l.location_id = a.current_location_id
   JOIN departments d           ON d.department_id = l.department_id
   JOIN maintenance_types t     ON t.type_id = s.type_id;
+
+-- What the screens read: the summary view with money hidden from users who may not see costs
+-- (only roles with the report.view permission see cost figures).
+CREATE VIEW vw_work_order_secure AS
+SELECT work_order_id, wo_number, asset_id, asset_tag, model_name, department, type_name,
+       is_preventive, is_calibration, priority, status, description, resolution_notes,
+       service_report_no, created_by, opened_at, scheduled_date, started_at, completed_at,
+       IF(fn_has_permission('report.view'), labor_cost, NULL) AS labor_cost,
+       IF(fn_has_permission('report.view'), parts_cost, NULL) AS parts_cost,
+       IF(fn_has_permission('report.view'), total_cost, NULL) AS total_cost,
+       technicians, days_open
+  FROM vw_work_order_summary;

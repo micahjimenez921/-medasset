@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import DataTable from '../ui/DataTable'
 import type { Column } from '../ui/DataTable'
 import StatusBadge from '../ui/StatusBadge'
+import { useAuth } from '../../auth/auth-context'
 import { formatDate, formatPeso } from '../../lib/format'
 import type { WorkOrderSummary } from '../../api/types'
 
@@ -15,6 +16,7 @@ interface WorkOrderTableProps {
 
 export default function WorkOrderTable({ workOrders, showAsset = true, exportName, pageSize }: WorkOrderTableProps) {
   const navigate = useNavigate()
+  const { can } = useAuth()
 
   const columns: Column<WorkOrderSummary>[] = [
     {
@@ -54,7 +56,9 @@ export default function WorkOrderTable({ workOrders, showAsset = true, exportNam
     { header: 'Status', cell: (w) => <StatusBadge value={w.status} />, csv: (w) => w.status },
     { header: 'Technicians', cell: (w) => w.technicians ?? <span className="text-slate-300">Unassigned</span>, csv: (w) => w.technicians ?? '' },
     { header: 'Opened', cell: (w) => formatDate(w.opened_at), csv: (w) => w.opened_at },
-    { header: 'Cost', cell: (w) => formatPeso(w.total_cost), csv: (w) => w.total_cost, className: 'text-right' },
+    ...(can('report.view')
+      ? [{ header: 'Cost', cell: (w: WorkOrderSummary) => formatPeso(w.total_cost), csv: (w: WorkOrderSummary) => w.total_cost, className: 'text-right' }]
+      : []),
   ]
 
   return (

@@ -9,9 +9,17 @@ export default function AssetInfoCard({ asset }: { asset: Asset }) {
     ['Category', `${asset.category} (class ${asset.risk_class})`],
     ['Manufacturer', asset.manufacturer],
     ['Supplier', asset.supplier ?? '—'],
+    [
+      'Acquired through',
+      asset.acquisition_type === 'Donation'
+        ? `Donation from ${asset.donor ?? 'unknown donor'}`
+        : 'Public bidding (R.A. 12009)',
+    ],
     ['Location', `${asset.department} · ${asset.room_name}`],
     ['Purchase date', `${formatDate(asset.purchase_date)} (${asset.age_years} yr old)`],
-    ['Purchase cost', formatPeso(asset.purchase_cost)],
+    ...(asset.purchase_cost !== null
+      ? [[asset.acquisition_type === 'Donation' ? 'Declared value' : 'Purchase cost', formatPeso(asset.purchase_cost)] as [string, string]]
+      : []),
     [
       'Warranty',
       <span key="w" className="inline-flex items-center gap-2">
@@ -19,7 +27,9 @@ export default function AssetInfoCard({ asset }: { asset: Asset }) {
       </span>,
     ],
     ['Runtime', `${formatNumber(asset.runtime_hours)} hours`],
-    ['Lifetime maintenance cost', formatPeso(asset.lifetime_maintenance_cost)],
+    ...(asset.lifetime_maintenance_cost !== null
+      ? [['Lifetime maintenance cost', formatPeso(asset.lifetime_maintenance_cost)] as [string, string]]
+      : []),
   ]
 
   return (

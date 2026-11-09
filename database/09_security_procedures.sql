@@ -59,6 +59,18 @@ BEGIN
   END IF;
 END$$
 
+-- Work-order row gate: the work order must be assigned to / opened by the signed-in user
+-- unless their role can see all work orders. Called by every work-order procedure.
+CREATE PROCEDURE sp_require_work_order_access(IN p_work_order_id INT)
+BEGIN
+  CALL sp_require_login();
+  IF fn_can_access_work_order(p_work_order_id) = 0 THEN
+    CALL sp_log_security_event('PERMISSION_DENIED', @app_user_id, @app_user, @app_user,
+                               CONCAT('Work order ', IFNULL(p_work_order_id, 0), ' is not assigned to this user'));
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'You do not have permission to do this.';
+  END IF;
+END$$
+
 -- ---------------------------------------------------------------------
 -- LOGIN (called by Django before a session exists)
 -- ---------------------------------------------------------------------

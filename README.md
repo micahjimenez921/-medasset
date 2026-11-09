@@ -33,9 +33,9 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 |---|---|---|
 | Tables | 25 | `assets`, `maintenance_schedules`, `work_orders`, `audit_logs`, `users`, `roles`, `permissions` |
 | Triggers | 48 | status and transfer history, runtime alerts, work-order workflow, audit logging, append-only guards |
-| Stored procedures | 51 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
-| Functions | 4 | `fn_work_order_labor_cost`, `fn_work_order_parts_cost`, `fn_asset_total_cost`, `fn_schedule_state` |
-| Views | 4 | `vw_asset_overview`, `vw_work_order_summary`, `vw_schedule_status`, `vw_alerts` |
+| Stored procedures | 52 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
+| Functions | 6 | `fn_work_order_labor_cost`, `fn_work_order_parts_cost`, `fn_asset_total_cost`, `fn_schedule_state`, `fn_has_permission`, `fn_can_access_work_order` |
+| Views | 5 | `vw_asset_overview`, `vw_work_order_summary`, `vw_work_order_secure`, `vw_schedule_status`, `vw_alerts` |
 | Scheduled event | 1 | `evt_daily_preventive_check` (daily at 06:00) |
 
 ### Roles
@@ -43,7 +43,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 | Role | Typical user | Can do |
 |---|---|---|
 | Administrator | Biomedical/IT admin, asset manager | Everything, including user management and audit trail |
-| Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | Register and transfer assets, update status and runtime, manage schedules and alerts, run work orders. Cannot decommission, cancel work orders, view reports or audit, or manage users |
+| Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | View assets, schedules and alerts, acknowledge alerts, report faults on an asset and carry out work orders (only the administrator turns an alert into a job and assigns it). Sees and acts only on work orders assigned to them or opened by them (enforced in the database), with costs hidden. Cannot decommission, cancel work orders, view reports or audit, or manage users |
 | Viewer | Department heads, finance, quality and auditors | Read-only access, including reports and audit trail |
 
 See [SECURITY.md](SECURITY.md) for the full list of controls and known limits.

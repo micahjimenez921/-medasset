@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../../api/client'
+import { useAuth } from '../../auth/auth-context'
 import ActionModal from '../ui/ActionModal'
 import { Field, SelectInput, TextInput } from '../ui/Field'
 import type { LaborLine } from '../../api/types'
@@ -13,7 +14,10 @@ interface LogLaborModalProps {
 }
 
 /** Adds worked hours for an assigned technician (sp_log_labor_hours). */
-export default function LogLaborModal({ workOrderId, labor, onClose, onDone }: LogLaborModalProps) {
+export default function LogLaborModal({ workOrderId, labor: allLabor, onClose, onDone }: LogLaborModalProps) {
+  const { user, can } = useAuth()
+  // a technician may only log their own hours (the database enforces this too)
+  const labor = can('workorder.view_all') ? allLabor : allLabor.filter((l) => l.user_id === user?.user_id)
   const [technicianId, setTechnicianId] = useState(labor[0] ? String(labor[0].technician_id) : '')
   const [hours, setHours] = useState('')
 

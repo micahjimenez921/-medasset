@@ -1,10 +1,11 @@
 import DataTable from '../ui/DataTable'
 import type { Column } from '../ui/DataTable'
 import { Badge } from '../ui/StatusBadge'
+import { useAuth } from '../../auth/auth-context'
 import { formatNumber, formatPeso } from '../../lib/format'
 import type { LaborLine } from '../../api/types'
 
-const columns: Column<LaborLine>[] = [
+const baseColumns: Column<LaborLine>[] = [
   {
     header: 'Technician',
     cell: (l) => (
@@ -18,6 +19,9 @@ const columns: Column<LaborLine>[] = [
   },
   { header: 'Role', cell: (l) => <Badge tone={l.role === 'Lead' ? 'sky' : 'slate'}>{l.role}</Badge> },
   { header: 'Hours', cell: (l) => formatNumber(l.hours_worked), className: 'text-right' },
+]
+
+const costColumns: Column<LaborLine>[] = [
   { header: 'Rate', cell: (l) => `${formatPeso(l.hourly_rate)} / h`, className: 'text-right' },
   {
     header: 'Labor cost',
@@ -27,6 +31,8 @@ const columns: Column<LaborLine>[] = [
 ]
 
 export default function LaborTable({ lines }: { lines: LaborLine[] }) {
+  const { can } = useAuth()
+  const columns = can('report.view') ? [...baseColumns, ...costColumns] : baseColumns
   return (
     <DataTable
       columns={columns}

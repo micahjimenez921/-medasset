@@ -42,7 +42,7 @@ export default function AddPartModal({ workOrderId, onClose, onDone }: AddPartMo
           <option value="">Select a part...</option>
           {parts.data?.map((p) => (
             <option key={p.part_id} value={p.part_id} disabled={p.quantity_on_hand === 0}>
-              {p.name} ({p.part_number}) · {p.quantity_on_hand} in stock · {formatPeso(p.unit_cost)}
+              {p.name} ({p.part_number}) · {p.quantity_on_hand} in stock {p.unit_cost !== null ? `· ${formatPeso(p.unit_cost)}` : ''}
             </option>
           ))}
         </SelectInput>
@@ -51,7 +51,7 @@ export default function AddPartModal({ workOrderId, onClose, onDone }: AddPartMo
       <Field
         label="Quantity"
         required
-        hint={selected ? `${selected.quantity_on_hand} in stock. Estimated cost: ${formatPeso(selected.unit_cost * (Number(quantity) || 0))}` : undefined}
+        hint={selected ? `${selected.quantity_on_hand} in stock.${selected.unit_cost !== null ? ` Estimated cost: ${formatPeso(selected.unit_cost * (Number(quantity) || 0))}` : ''}` : undefined}
       >
         <TextInput type="number" min="1" step="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       </Field>

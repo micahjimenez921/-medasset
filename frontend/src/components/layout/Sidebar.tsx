@@ -71,7 +71,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               }
             >
               <Icon size={18} />
-              {label}
+              {to === '/work-orders' && !can('workorder.view_all') ? 'My work orders' : label}
             </NavLink>
           ))}
         </nav>

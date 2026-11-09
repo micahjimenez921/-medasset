@@ -1,9 +1,10 @@
 import DataTable from '../ui/DataTable'
 import type { Column } from '../ui/DataTable'
+import { useAuth } from '../../auth/auth-context'
 import { formatDateTime, formatPeso } from '../../lib/format'
 import type { PartLine } from '../../api/types'
 
-const columns: Column<PartLine>[] = [
+const baseColumns: Column<PartLine>[] = [
   {
     header: 'Part',
     cell: (p) => (
@@ -14,16 +15,22 @@ const columns: Column<PartLine>[] = [
     ),
   },
   { header: 'Quantity', cell: (p) => p.quantity, className: 'text-right' },
+]
+
+const costColumns: Column<PartLine>[] = [
   { header: 'Unit cost', cell: (p) => formatPeso(p.unit_cost), className: 'text-right' },
   {
     header: 'Line cost',
     cell: (p) => <span className="font-medium text-slate-900">{formatPeso(p.line_cost)}</span>,
     className: 'text-right',
   },
-  { header: 'Used', cell: (p) => formatDateTime(p.used_at) },
 ]
 
+const usedColumn: Column<PartLine> = { header: 'Used', cell: (p) => formatDateTime(p.used_at) }
+
 export default function PartsTable({ lines }: { lines: PartLine[] }) {
+  const { can } = useAuth()
+  const columns = [...baseColumns, ...(can('report.view') ? costColumns : []), usedColumn]
   return (
     <DataTable columns={columns} rows={lines} rowKey={(p) => p.wo_part_id} empty="No parts have been used." />
   )

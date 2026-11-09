@@ -101,7 +101,7 @@ CREATE INDEX idx_secev_type ON security_events (event_type, event_id);
 -- ---------------------------------------------------------------------
 INSERT INTO roles (name, description) VALUES
  ('Administrator', 'Full access, including user management and the audit trail.'),
- ('Technician',    'Registers and moves equipment, runs maintenance and work orders. Cannot decommission, cancel, see costs or manage users.'),
+ ('Technician',    'Field worker: views equipment, schedules and alerts, reports faults, and carries out assigned work orders. Cannot register, transfer or retire equipment, manage schedules, assign work, cancel, see costs or manage users.'),
  ('Viewer',        'Read-only access to equipment, work orders, reports and the audit trail.');
 
 INSERT INTO permissions (code, category, description) VALUES
@@ -118,6 +118,7 @@ INSERT INTO permissions (code, category, description) VALUES
  ('alert.acknowledge',   'Maintenance', 'Acknowledge alerts'),
  ('alert.run_check',     'Maintenance', 'Run the preventive check manually'),
  ('workorder.view',      'Work orders', 'View work orders'),
+ ('workorder.view_all',  'Work orders', 'See every work order, not only the ones assigned to you'),
  ('workorder.create',    'Work orders', 'Open a work order'),
  ('workorder.assign',    'Work orders', 'Assign technicians'),
  ('workorder.execute',   'Work orders', 'Start work, log labor and parts'),
@@ -138,16 +139,15 @@ SELECT r.role_id, p.permission_id FROM roles r CROSS JOIN permissions p
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
  WHERE r.name = 'Technician'
-   AND p.code IN ('dashboard.view','lookup.view','asset.view','asset.create','asset.transfer',
-                  'asset.update_status','schedule.view','schedule.manage','alert.view',
-                  'alert.acknowledge','alert.run_check','workorder.view','workorder.create',
-                  'workorder.assign','workorder.execute','workorder.complete');
+   AND p.code IN ('dashboard.view','lookup.view','asset.view','schedule.view','alert.view',
+                  'alert.acknowledge','workorder.view','workorder.create',
+                  'workorder.execute','workorder.complete');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
  WHERE r.name = 'Viewer'
    AND p.code IN ('dashboard.view','lookup.view','asset.view','schedule.view','alert.view',
-                  'workorder.view','report.view','audit.view');
+                  'workorder.view','workorder.view_all','report.view','audit.view');
 
 -- ---------------------------------------------------------------------
 -- Triggers: evidence tables are append-only

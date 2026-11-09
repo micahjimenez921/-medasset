@@ -59,7 +59,7 @@ export default function AlertCard({ alert: a, busy, onAcknowledge, onCreateWorkO
           </Link>
         ) : (
           a.status !== 'Resolved' && (
-            <Can permission="workorder.create">
+            <Can permission="workorder.assign">
               <Button className="!px-3 !py-1.5" onClick={() => onCreateWorkOrder(a)}>
                 Create work order
               </Button>

@@ -23,6 +23,7 @@ import CompleteWorkOrderModal from '../components/workorders/CompleteWorkOrderMo
 import CancelWorkOrderModal from '../components/workorders/CancelWorkOrderModal'
 import type { WorkOrderDetail } from '../api/types'
 import Can from '../components/auth/Can'
+import { useAuth } from '../auth/auth-context'
 
 type ModalName = 'assign' | 'labor' | 'part' | 'complete' | 'cancel' | null
 
@@ -30,6 +31,7 @@ export default function WorkOrderDetailPage() {
   const { id } = useParams()
   const { data, loading, error, reload } = useFetch<WorkOrderDetail>(`/work-orders/${id}/`)
   const toast = useToast()
+  const { can } = useAuth()
   const [modal, setModal] = useState<ModalName>(null)
   const [starting, setStarting] = useState(false)
 
@@ -148,7 +150,9 @@ export default function WorkOrderDetailPage() {
           <div className="lg:col-span-2">
             <WorkOrderInfoCard wo={wo} />
           </div>
-          <CostSummary labor={wo.labor_cost} parts={wo.parts_cost} total={wo.total_cost} />
+          {can('report.view') && wo.total_cost !== null && (
+            <CostSummary labor={wo.labor_cost ?? 0} parts={wo.parts_cost ?? 0} total={wo.total_cost} />
+          )}
         </div>
 
         {calibration && <CalibrationCard calibration={calibration} />}

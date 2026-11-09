@@ -36,7 +36,7 @@ export default function TechnicianFormModal({ dialog, accounts, onClose, onDone 
   const [specialization, setSpecialization] = useState(tech?.specialization ?? '')
   const [contact, setContact] = useState(tech?.contact_number ?? '')
   const [email, setEmail] = useState(tech?.email ?? '')
-  const [rate, setRate] = useState(tech ? String(tech.hourly_rate) : '')
+  const [rate, setRate] = useState(tech ? String(tech.hourly_rate ?? '') : '')
   const [active, setActive] = useState(tech ? !!tech.is_active : true)
   const [userId, setUserId] = useState(String(tech?.user_id ?? accounts[0]?.user_id ?? ''))
   const [linkedId, setLinkedId] = useState(String(tech?.user_id ?? ''))

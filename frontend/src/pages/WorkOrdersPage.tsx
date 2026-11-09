@@ -12,6 +12,7 @@ import WorkOrderTable from '../components/workorders/WorkOrderTable'
 import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
 import type { WorkOrderSummary } from '../api/types'
 import Can from '../components/auth/Can'
+import { useAuth } from '../auth/auth-context'
 
 const STATUS_OPTIONS = [
   { value: 'Active', label: 'Active' },
@@ -26,6 +27,8 @@ const STATUS_OPTIONS = [
 export default function WorkOrdersPage() {
   // the status filter lives in the URL (?status=Completed) so it survives a refresh and can be linked to
   const [params, setParams] = useSearchParams()
+  const { can } = useAuth()
+  const seesAll = can('workorder.view_all')
   const status = params.get('status') ?? 'Active'
   const [text, setText] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -50,8 +53,12 @@ export default function WorkOrdersPage() {
   return (
     <>
       <PageHeader
-        title="Work orders"
-        subtitle="Maintenance, calibration and repair jobs, with technicians, parts and costs"
+        title={seesAll ? 'Work orders' : 'My work orders'}
+        subtitle={
+          seesAll
+            ? 'Maintenance, calibration and repair jobs, with technicians, parts and costs'
+            : 'The jobs assigned to you, and the ones you opened yourself'
+        }
         actions={
           <Can permission="workorder.create">
             <Button onClick={() => setShowForm(true)}>

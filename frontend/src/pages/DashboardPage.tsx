@@ -13,10 +13,14 @@ import DepartmentChart from '../components/dashboard/DepartmentChart'
 import { formatNumber, formatPeso } from '../lib/format'
 import type { CostReport, DashboardData } from '../api/types'
 import Can from '../components/auth/Can'
+import { useAuth } from '../auth/auth-context'
 
 export default function DashboardPage() {
   const dashboard = useFetch<DashboardData>('/dashboard/')
-  const costs = useFetch<CostReport>('/reports/costs/')
+  const { can } = useAuth()
+  const seesCosts = can('report.view')
+  // technicians have no cost access: skip the call so no denied-access event is logged
+  const costs = useFetch<CostReport>(seesCosts ? '/reports/costs/' : null)
   const toast = useToast()
   const [running, setRunning] = useState(false)
 
@@ -87,7 +91,7 @@ export default function DashboardPage() {
           loading={loading}
         />
         <StatCard
-          label="Active work orders"
+          label={can('workorder.view_all') ? 'Active work orders' : 'My active work orders'}
           value={s && formatNumber(s.active_work_orders)}
           icon={ClipboardList}
           tone="sky"
@@ -98,22 +102,28 @@ export default function DashboardPage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <CostChart byMonth={costs.data?.by_month} loading={costs.loading && !costs.data} />
+          {seesCosts ? (
+            <CostChart byMonth={costs.data?.by_month} loading={costs.loading && !costs.data} />
+          ) : (
+            <DepartmentChart rows={dashboard.data?.by_department} loading={loading} />
+          )}
         </div>
         <AttentionList items={dashboard.data?.attention} loading={loading} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <DepartmentChart rows={dashboard.data?.by_department} loading={loading} />
+          {seesCosts && <DepartmentChart rows={dashboard.data?.by_department} loading={loading} />}
         </div>
         <div className="grid content-start gap-4">
-          <StatCard
-            label="Maintenance cost this year"
-            value={s && formatPeso(s.maintenance_cost_ytd)}
-            icon={Wallet}
-            loading={loading}
-          />
+          {seesCosts && (
+            <StatCard
+              label="Maintenance cost this year"
+              value={s && formatPeso(s.maintenance_cost_ytd ?? 0)}
+              icon={Wallet}
+              loading={loading}
+            />
+          )}
           <StatCard
             label="Warranties expiring (90 days)"
             value={s && formatNumber(s.warranties_expiring)}

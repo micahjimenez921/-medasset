@@ -7,7 +7,7 @@ Use three browser profiles or sign out between roles.
 ## 1. Sign in and roles (2 min)
 1. Open http://localhost:5173. Point out: hospital branding, "Sign-ins and actions are recorded".
 2. Sign in as **viewer1**. Menu shows no Users; open any asset: **no action buttons**. Open Audit log: read-only.
-3. Sign in as **tech1**. Open an asset: Transfer, Status, Runtime, New work order are visible; **Decommission is not**.
+3. Sign in as **tech1**. Open an asset: only **New work order** (report a fault) is available; Transfer, Status, Runtime and Decommission are not. Schedules are view-only.
 4. Sign in as **admin**. Open **Users**: add a user, show the temporary password appears once.
 5. Audit log → **Roles & permissions** tab: the access matrix comes from the database.
 
@@ -28,6 +28,7 @@ Use three browser profiles or sign out between roles.
    signed-in user; the 06:00 runs show `SYSTEM (scheduler)`.
 
 ## 3b. Staff and external technicians (1 min) — as admin
+0. Sign in as the technician: the sidebar says **My work orders** and lists only that person's jobs, with no cost columns. Opening another job's URL is refused and logged.
 1. Open **Technicians**. Staff technicians (can sign in) and external technicians (never sign in) are listed separately.
 2. Click **Add external technician**: note that company is required and there is no sign-in account.
 3. On **Users**, add a user with the Technician role: the technician number, team and rate fields appear, and the person immediately shows in the Assign list.

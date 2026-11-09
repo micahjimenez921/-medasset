@@ -366,6 +366,11 @@ BEGIN
   DECLARE v_match INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.create');
+  -- Turning a maintenance alert into a job is a planning decision (admin level);
+  -- a technician may still report a fault on an asset (no alert attached).
+  IF p_alert_id IS NOT NULL THEN
+    CALL sp_require_permission('workorder.assign');
+  END IF;
 
   IF p_description IS NULL OR TRIM(p_description) = '' THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A work order description is required.';
@@ -394,7 +399,7 @@ BEGIN
   END IF;
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = v_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = v_id;
 END$$
 
 CREATE PROCEDURE sp_assign_technician(
@@ -403,6 +408,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.assign');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;
@@ -422,7 +428,7 @@ BEGIN
   END IF;
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 CREATE PROCEDURE sp_start_work_order(IN p_work_order_id INT)
@@ -430,6 +436,7 @@ BEGIN
   DECLARE v_status VARCHAR(20);
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.execute');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;
@@ -442,7 +449,7 @@ BEGIN
   UPDATE work_orders SET status = 'In Progress' WHERE work_order_id = p_work_order_id;
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 CREATE PROCEDURE sp_log_labor_hours(
@@ -452,9 +459,15 @@ BEGIN
   DECLARE v_assigned INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.execute');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   IF p_hours IS NULL OR p_hours <= 0 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hours must be greater than zero.';
+  END IF;
+  -- staff technicians log their own hours; only roles that see every work order log for others
+  IF fn_has_permission('workorder.view_all') = 0 AND NOT EXISTS (
+       SELECT 1 FROM technicians WHERE technician_id = p_technician_id AND user_id = @app_user_id) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'You can only log your own hours.';
   END IF;
 
   START TRANSACTION;
@@ -475,7 +488,7 @@ BEGIN
    WHERE work_order_id = p_work_order_id AND technician_id = p_technician_id;
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 -- Consumes stock and records the replaced component in ONE transaction.
@@ -487,6 +500,7 @@ BEGIN
   DECLARE v_stock INT;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.execute');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   IF p_quantity IS NULL OR p_quantity <= 0 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Quantity must be greater than zero.';
@@ -514,7 +528,7 @@ BEGIN
   VALUES (p_work_order_id, p_part_id, p_quantity);
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 CREATE PROCEDURE sp_complete_work_order(
@@ -528,6 +542,7 @@ BEGIN
   DECLARE v_external INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.complete');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   START TRANSACTION;
   SELECT w.status, t.is_calibration INTO v_status, v_is_cal
@@ -569,7 +584,7 @@ BEGIN
    WHERE work_order_id = p_work_order_id;
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 CREATE PROCEDURE sp_cancel_work_order(IN p_work_order_id INT, IN p_reason VARCHAR(500))
@@ -578,6 +593,7 @@ BEGIN
   DECLARE v_parts INT DEFAULT 0;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
   CALL sp_require_permission('workorder.cancel');
+  CALL sp_require_work_order_access(p_work_order_id);
 
   START TRANSACTION;
   SELECT status INTO v_status FROM work_orders WHERE work_order_id = p_work_order_id FOR UPDATE;
@@ -597,7 +613,7 @@ BEGIN
    WHERE work_order_id = p_work_order_id AND status = 'Acknowledged';
   COMMIT;
 
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 END$$
 
 -- ---------------------------------------------------------------------

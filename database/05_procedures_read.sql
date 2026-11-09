@@ -31,14 +31,17 @@ BEGIN
     SELECT vendor_id, name FROM vendors WHERE vendor_type = 'Supplier' ORDER BY name;
   ELSEIF p_name = 'technicians' THEN
     SELECT t.technician_id, t.employee_no, CONCAT(t.first_name, ' ', t.last_name) AS full_name,
-           t.specialization, t.team, t.hourly_rate, t.is_active, t.company,
+           t.specialization, t.team,
+           IF(fn_has_permission('report.view'), t.hourly_rate, NULL) AS hourly_rate, t.is_active, t.company,
            IF(t.team IN ('In-house maintenance','Provincial engineering'), 'Staff', 'External') AS kind,
            t.user_id, u.username
       FROM technicians t LEFT JOIN users u ON u.user_id = t.user_id
      ORDER BY kind, FIELD(t.team,'In-house maintenance','Provincial engineering','Outsourced contractor','Manufacturer service'),
               t.last_name, t.first_name;
   ELSEIF p_name = 'parts' THEN
-    SELECT part_id, part_number, name, unit_cost, quantity_on_hand, reorder_level,
+    SELECT part_id, part_number, name,
+           IF(fn_has_permission('report.view'), unit_cost, NULL) AS unit_cost,
+           quantity_on_hand, reorder_level,
            (quantity_on_hand <= reorder_level) AS is_low_stock
       FROM parts ORDER BY name;
   ELSEIF p_name = 'maintenance_types' THEN
@@ -64,7 +67,8 @@ BEGIN
     (SELECT COUNT(*) FROM maintenance_alerts
       WHERE status IN ('Open','Acknowledged') AND alert_type = 'OVERDUE') AS overdue_alerts,
     (SELECT COUNT(*) FROM work_orders
-      WHERE status IN ('Open','Assigned','In Progress'))                  AS active_work_orders,
+      WHERE status IN ('Open','Assigned','In Progress')
+        AND fn_can_access_work_order(work_order_id) = 1)                  AS active_work_orders,
     (SELECT COUNT(*) FROM vw_schedule_status WHERE is_active = 1)         AS active_schedules,
     (SELECT COUNT(*) FROM vw_schedule_status
       WHERE is_active = 1 AND due_state = 'Overdue')                      AS overdue_schedules,
@@ -72,8 +76,10 @@ BEGIN
       WHERE status <> 'Decommissioned'
         AND warranty_expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)) AS warranties_expiring,
     (SELECT COUNT(*) FROM parts WHERE quantity_on_hand <= reorder_level)  AS low_stock_parts,
-    (SELECT IFNULL(SUM(total_cost), 0) FROM vw_work_order_summary
-      WHERE status = 'Completed' AND YEAR(completed_at) = YEAR(CURDATE())) AS maintenance_cost_ytd;
+    IF(fn_has_permission('report.view'),
+       (SELECT IFNULL(SUM(total_cost), 0) FROM vw_work_order_summary
+         WHERE status = 'Completed' AND YEAR(completed_at) = YEAR(CURDATE())),
+       NULL)                                                           AS maintenance_cost_ytd;
 
   SELECT d.name AS department, COUNT(a.asset_id) AS assets,
          SUM(a.status = 'Repair') AS in_repair
@@ -133,7 +139,9 @@ BEGIN
    WHERE asset_id = p_asset_id
    ORDER BY changed_at DESC, history_id DESC;
 
-  SELECT * FROM vw_work_order_summary WHERE asset_id = p_asset_id ORDER BY opened_at DESC;
+  SELECT * FROM vw_work_order_secure
+   WHERE asset_id = p_asset_id AND fn_can_access_work_order(work_order_id) = 1
+   ORDER BY opened_at DESC;
 END$$
 
 -- ---------------------------------------------------------------------
@@ -142,8 +150,9 @@ END$$
 CREATE PROCEDURE sp_list_work_orders(IN p_status VARCHAR(20), IN p_asset_id INT)
 BEGIN
   CALL sp_require_permission('workorder.view');
-  SELECT * FROM vw_work_order_summary
-   WHERE (p_status IS NULL OR p_status = ''
+  SELECT * FROM vw_work_order_secure
+   WHERE fn_can_access_work_order(work_order_id) = 1
+     AND (p_status IS NULL OR p_status = ''
           OR (p_status = 'Active' AND status IN ('Open','Assigned','In Progress'))
           OR status = p_status)
      AND (p_asset_id IS NULL OR asset_id = p_asset_id)
@@ -156,19 +165,26 @@ END$$
 CREATE PROCEDURE sp_get_work_order(IN p_work_order_id INT)
 BEGIN
   CALL sp_require_permission('workorder.view');
-  SELECT * FROM vw_work_order_summary WHERE work_order_id = p_work_order_id;
+  CALL sp_require_work_order_access(p_work_order_id);
+  SELECT * FROM vw_work_order_secure WHERE work_order_id = p_work_order_id;
 
   SELECT x.assignment_id, x.technician_id, CONCAT(te.first_name, ' ', te.last_name) AS technician,
          te.specialization, te.team, te.company,
          IF(te.team IN ('In-house maintenance','Provincial engineering'), 'Staff', 'External') AS kind,
-         x.role, x.hours_worked, x.hourly_rate, x.labor_cost, x.assigned_at
+         te.user_id, x.role, x.hours_worked,
+         IF(fn_has_permission('report.view'), x.hourly_rate, NULL) AS hourly_rate,
+         IF(fn_has_permission('report.view'), x.labor_cost, NULL)  AS labor_cost,
+         x.assigned_at
     FROM work_order_assignments x
     JOIN technicians te ON te.technician_id = x.technician_id
    WHERE x.work_order_id = p_work_order_id
    ORDER BY x.assignment_id;
 
   SELECT wp.wo_part_id, wp.part_id, p.part_number, p.name AS part_name,
-         wp.quantity, wp.unit_cost, wp.line_cost, wp.used_at
+         wp.quantity,
+         IF(fn_has_permission('report.view'), wp.unit_cost, NULL) AS unit_cost,
+         IF(fn_has_permission('report.view'), wp.line_cost, NULL) AS line_cost,
+         wp.used_at
     FROM work_order_parts wp
     JOIN parts p ON p.part_id = wp.part_id
    WHERE wp.work_order_id = p_work_order_id

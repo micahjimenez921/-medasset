@@ -12,7 +12,7 @@ export interface DashboardSummary {
   overdue_schedules: number
   warranties_expiring: number
   low_stock_parts: number
-  maintenance_cost_ytd: number
+  maintenance_cost_ytd: number | null
 }
 
 export interface DepartmentCount {
@@ -78,14 +78,14 @@ export interface Asset {
   department_id: number
   department: string
   purchase_date: string
-  purchase_cost: number
+  purchase_cost: number | null
   warranty_expiry: string | null
   warranty_status: 'None' | 'Active' | 'Expiring' | 'Expired'
   runtime_hours: number
   age_years: number
   decommissioned_at: string | null
   decommission_reason: string | null
-  lifetime_maintenance_cost: number
+  lifetime_maintenance_cost: number | null
   open_alerts: number
 }
 
@@ -151,9 +151,9 @@ export interface WorkOrderSummary {
   scheduled_date: string | null
   started_at: string | null
   completed_at: string | null
-  labor_cost: number
-  parts_cost: number
-  total_cost: number
+  labor_cost: number | null
+  parts_cost: number | null
+  total_cost: number | null
   technicians: string | null
   days_open: number
 }
@@ -204,10 +204,11 @@ export interface LaborLine {
   team: string
   company: string | null
   kind: 'Staff' | 'External'
+  user_id: number | null
   role: 'Lead' | 'Assistant'
   hours_worked: number
-  hourly_rate: number
-  labor_cost: number
+  hourly_rate: number | null
+  labor_cost: number | null
   assigned_at: string
 }
 
@@ -217,8 +218,8 @@ export interface PartLine {
   part_number: string
   part_name: string
   quantity: number
-  unit_cost: number
-  line_cost: number
+  unit_cost: number | null
+  line_cost: number | null
   used_at: string
 }
 
@@ -250,7 +251,7 @@ export interface TechnicianOption {
   full_name: string
   specialization: string | null
   team: string
-  hourly_rate: number
+  hourly_rate: number | null
   is_active: number
   company: string | null
   kind: 'Staff' | 'External'
@@ -296,7 +297,7 @@ export interface PartOption {
   part_id: number
   part_number: string
   name: string
-  unit_cost: number
+  unit_cost: number | null
   quantity_on_hand: number
   reorder_level: number
   is_low_stock: number
