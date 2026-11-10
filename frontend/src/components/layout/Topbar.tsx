@@ -59,7 +59,8 @@ export default function Topbar({ onMenu }: { onMenu: () => void }) {
           {today}
         </span>
 
-        <Link
+        {can('alert.view') && (
+          <Link
           to="/alerts"
           className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100"
           aria-label={`${openAlerts} open alerts`}
@@ -71,6 +72,7 @@ export default function Topbar({ onMenu }: { onMenu: () => void }) {
             </span>
           )}
         </Link>
+        )}
 
         {user && (
           <div className="relative">

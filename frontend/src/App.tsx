@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from './auth/auth-context'
 import AppLayout from './components/layout/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import AssetsPage from './pages/AssetsPage'
@@ -7,6 +8,7 @@ import AssetDetailPage from './pages/AssetDetailPage'
 import WorkOrdersPage from './pages/WorkOrdersPage'
 import WorkOrderDetailPage from './pages/WorkOrderDetailPage'
 import AlertsPage from './pages/AlertsPage'
+import RequestsPage from './pages/RequestsPage'
 import SchedulesPage from './pages/SchedulesPage'
 import ReportsPage from './pages/ReportsPage'
 import AuditLogPage from './pages/AuditLogPage'
@@ -23,6 +25,12 @@ function Guard({ permission, children }: { permission: string; children: ReactNo
   return <RequirePermission permission={permission}>{children}</RequirePermission>
 }
 
+/** Home: the dashboard, or the reports page for roles that have no dashboard (Department Staff). */
+function Home() {
+  const { can } = useAuth()
+  return can('dashboard.view') ? <DashboardPage /> : <Navigate to="/requests" replace />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -31,11 +39,12 @@ export default function App() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Guard permission="dashboard.view"><DashboardPage /></Guard>} />
+          <Route path="/" element={<Home />} />
           <Route path="/assets" element={<Guard permission="asset.view"><AssetsPage /></Guard>} />
           <Route path="/assets/:id" element={<Guard permission="asset.view"><AssetDetailPage /></Guard>} />
           <Route path="/work-orders" element={<Guard permission="workorder.view"><WorkOrdersPage /></Guard>} />
           <Route path="/work-orders/:id" element={<Guard permission="workorder.view"><WorkOrderDetailPage /></Guard>} />
+          <Route path="/requests" element={<Guard permission="request.view"><RequestsPage /></Guard>} />
           <Route path="/alerts" element={<Guard permission="alert.view"><AlertsPage /></Guard>} />
           <Route path="/schedules" element={<Guard permission="schedule.view"><SchedulesPage /></Guard>} />
           <Route path="/reports" element={<Guard permission="report.view"><ReportsPage /></Guard>} />

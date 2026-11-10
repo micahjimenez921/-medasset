@@ -31,6 +31,10 @@ urlpatterns = [
     path("work-orders/<int:pk>/", views.WorkOrderDetailView.as_view()),
     path("work-orders/<int:pk>/<str:action>/", views.WorkOrderActionView.as_view()),
 
+    # service requests
+    path("requests/", views.ServiceRequestListView.as_view()),
+    path("requests/<int:pk>/<str:action>/", views.ServiceRequestActionView.as_view()),
+
     # preventive maintenance
     path("alerts/", views.AlertListView.as_view()),
     path("alerts/run-check/", views.RunPreventiveCheckView.as_view()),

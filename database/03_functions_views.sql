@@ -96,6 +96,14 @@ BEGIN
   RETURN v_count > 0;
 END$$
 
+CREATE FUNCTION fn_user_full_name(p_username VARCHAR(100)) RETURNS VARCHAR(100)
+READS SQL DATA
+BEGIN
+  DECLARE v_name VARCHAR(100);
+  SELECT full_name INTO v_name FROM users WHERE username = p_username LIMIT 1;
+  RETURN COALESCE(v_name, p_username);
+END$$
+
 DELIMITER ;
 
 -- ---------------------------------------------------------------------
@@ -194,3 +202,18 @@ SELECT work_order_id, wo_number, asset_id, asset_tag, model_name, department, ty
        IF(fn_has_permission('report.view'), total_cost, NULL) AS total_cost,
        technicians, days_open
   FROM vw_work_order_summary;
+
+CREATE VIEW vw_service_requests AS
+SELECT sr.request_id, CONCAT('SR-', LPAD(sr.request_id, 6, '0')) AS request_number,
+       sr.asset_id, a.asset_tag, CONCAT(mf.name, ' ', m.model_name) AS asset_name,
+       d.name AS department, sr.priority, sr.description,
+       sr.reported_by, fn_user_full_name(sr.reported_by) AS reporter_name, sr.reported_at,
+       sr.status, sr.work_order_id,
+       IF(sr.work_order_id IS NULL, NULL, CONCAT('WO-', LPAD(sr.work_order_id, 6, '0'))) AS wo_number,
+       sr.review_note, sr.reviewed_by, sr.reviewed_at
+  FROM service_requests sr
+  JOIN assets a            ON a.asset_id = sr.asset_id
+  JOIN asset_models m      ON m.model_id = a.model_id
+  JOIN vendors mf          ON mf.vendor_id = m.manufacturer_id
+  JOIN locations l         ON l.location_id = a.current_location_id
+  JOIN departments d       ON d.department_id = l.department_id;

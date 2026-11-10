@@ -158,6 +158,29 @@ class WorkOrderActionView(ActionView):
 # ---------------------------------------------------------------------
 # alerts + schedules
 # ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# service requests: technicians report a fault, the administrator reviews it
+# ---------------------------------------------------------------------
+class ServiceRequestListView(APIView):
+    def get(self, request):
+        return Response(call_proc(request, "sp_list_service_requests", [query(request, "status")])[0])
+
+    def post(self, request):
+        d = request.data
+        sets = call_proc(request, "sp_report_fault", [
+            d.get("asset_id"), d.get("priority"), d.get("description"),
+        ])
+        return Response(first_row(sets), status=201)
+
+
+class ServiceRequestActionView(ActionView):
+    actions = {
+        "convert": ("sp_convert_request", lambda d: [d.get("type_id"), d.get("priority"), d.get("note")]),
+        "link":    ("sp_link_request",    lambda d: [d.get("work_order_id"), d.get("note")]),
+        "reject":  ("sp_reject_request",  lambda d: [d.get("note")]),
+    }
+
+
 class AlertListView(APIView):
     def get(self, request):
         return Response(call_proc(request, "sp_list_alerts", [query(request, "status")])[0])

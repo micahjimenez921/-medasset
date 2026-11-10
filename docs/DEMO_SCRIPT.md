@@ -7,8 +7,10 @@ Use three browser profiles or sign out between roles.
 ## 1. Sign in and roles (2 min)
 1. Open http://localhost:5173. Point out: hospital branding, "Sign-ins and actions are recorded".
 2. Sign in as **viewer1**. Menu shows no Users; open any asset: **no action buttons**. Open Audit log: read-only.
-3. Sign in as **tech1**. Open an asset: only **New work order** (report a fault) is available; Transfer, Status, Runtime and Decommission are not. Schedules are view-only.
-4. Sign in as **admin**. Open **Users**: add a user, show the temporary password appears once.
+3. Sign in as **tech1**. Open an asset: only **Report a fault** is available (it sends a service request; the technician cannot open work orders); Transfer, Status, Runtime and Decommission are not. Schedules are view-only.
+3a. Sign in as a **Department Staff** user (e.g. a nurse): the menu has only Assets and My reports. Open an asset, click **Report a fault**.
+3b. Still as the technician, click **Report a fault** on an asset, then open **My reports**: the request shows *Waiting for review*.
+4. Sign in as **admin**. Open **Service requests**, click **Review** and create the work order (or link it to an open one, or reject it with a reason). Report the same fault again as the technician to show that one open job per problem is enforced. Then open **Users**: add a user, show the temporary password appears once.
 5. Audit log → **Roles & permissions** tab: the access matrix comes from the database.
 
 ## 2. Asset lifecycle (3 min) — as admin

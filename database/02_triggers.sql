@@ -132,9 +132,22 @@ BEFORE INSERT ON work_orders
 FOR EACH ROW
 BEGIN
   DECLARE v_asset_status VARCHAR(20);
+  DECLARE v_open_id INT DEFAULT NULL;
+  DECLARE v_msg VARCHAR(255);
   SELECT status INTO v_asset_status FROM assets WHERE asset_id = NEW.asset_id;
   IF v_asset_status = 'Decommissioned' THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot open a work order for a decommissioned asset.';
+  END IF;
+  -- One open job per problem: several people reporting the same fault must not
+  -- create several jobs. Historical (completed / cancelled) jobs are not affected.
+  SELECT MIN(work_order_id) INTO v_open_id
+    FROM work_orders
+   WHERE asset_id = NEW.asset_id AND type_id = NEW.type_id
+     AND status IN ('Open','Assigned','In Progress');
+  IF v_open_id IS NOT NULL THEN
+    SET v_msg = CONCAT('WO-', LPAD(v_open_id, 6, '0'),
+        ' is already open for this asset and job type. Use that job instead of opening another.');
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_msg;
   END IF;
   SET NEW.status = 'Open';
 END$$
@@ -419,6 +432,80 @@ BEGIN
             JSON_OBJECT('quantity_on_hand', NEW.quantity_on_hand, 'unit_cost', NEW.unit_cost),
             COALESCE(@app_user, CURRENT_USER()));
   END IF;
+END$$
+
+-- ---------------------------------------------------------------------
+-- Service requests: a technician REPORTS a fault, the administrator reviews it
+-- ---------------------------------------------------------------------
+CREATE TRIGGER trg_sr_bi_rules
+BEFORE INSERT ON service_requests
+FOR EACH ROW
+BEGIN
+  DECLARE v_asset_status VARCHAR(20);
+  DECLARE v_dup INT DEFAULT 0;
+  SELECT status INTO v_asset_status FROM assets WHERE asset_id = NEW.asset_id;
+  IF v_asset_status = 'Decommissioned' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot report a fault on a decommissioned asset.';
+  END IF;
+  IF NEW.description IS NULL OR TRIM(NEW.description) = '' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Please describe the problem.';
+  END IF;
+  SELECT COUNT(*) INTO v_dup FROM service_requests
+   WHERE asset_id = NEW.asset_id AND reported_by = NEW.reported_by AND status = 'Pending';
+  IF v_dup > 0 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'You already reported this asset and that report is still waiting for review.';
+  END IF;
+  SET NEW.status = 'Pending', NEW.work_order_id = NULL, NEW.review_note = NULL,
+      NEW.reviewed_by = NULL, NEW.reviewed_at = NULL;
+END$$
+
+CREATE TRIGGER trg_sr_bu_rules
+BEFORE UPDATE ON service_requests
+FOR EACH ROW
+BEGIN
+  IF OLD.status <> 'Pending' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A reviewed request cannot be changed (audit rule).';
+  END IF;
+  IF NEW.asset_id <> OLD.asset_id OR NEW.description <> OLD.description OR NEW.reported_by <> OLD.reported_by THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The reported problem cannot be edited.';
+  END IF;
+  IF NEW.status IN ('Converted','Linked') AND NEW.work_order_id IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A converted or linked request needs a work order.';
+  END IF;
+  IF NEW.status = 'Rejected' AND (NEW.review_note IS NULL OR TRIM(NEW.review_note) = '') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A reason is required to reject a request.';
+  END IF;
+END$$
+
+CREATE TRIGGER trg_sr_bd_block
+BEFORE DELETE ON service_requests
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Service requests are kept for the audit trail.';
+END$$
+
+CREATE TRIGGER trg_sr_ai_audit
+AFTER INSERT ON service_requests
+FOR EACH ROW
+BEGIN
+  INSERT INTO audit_logs (table_name, record_id, action, new_values, changed_by)
+  VALUES ('service_requests', NEW.request_id, 'INSERT',
+          JSON_OBJECT('asset_id', NEW.asset_id, 'priority', NEW.priority,
+                      'status', NEW.status, 'description', NEW.description),
+          COALESCE(@app_user, CURRENT_USER()));
+END$$
+
+CREATE TRIGGER trg_sr_au_audit
+AFTER UPDATE ON service_requests
+FOR EACH ROW
+BEGIN
+  INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, changed_by)
+  VALUES ('service_requests', NEW.request_id, 'UPDATE',
+          JSON_OBJECT('status', OLD.status),
+          JSON_OBJECT('status', NEW.status, 'work_order_id', NEW.work_order_id,
+                      'review_note', NEW.review_note),
+          COALESCE(@app_user, CURRENT_USER()));
 END$$
 
 DELIMITER ;

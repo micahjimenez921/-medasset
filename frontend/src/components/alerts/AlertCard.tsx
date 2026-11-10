@@ -4,6 +4,7 @@ import StatusBadge from '../ui/StatusBadge'
 import { formatDateTime } from '../../lib/format'
 import type { AlertItem } from '../../api/types'
 import Can from '../auth/Can'
+import { useAuth } from '../../auth/auth-context'
 
 interface AlertCardProps {
   alert: AlertItem
@@ -14,6 +15,9 @@ interface AlertCardProps {
 
 /** One maintenance alert, with the actions that make sense for its current status. */
 export default function AlertCard({ alert: a, busy, onAcknowledge, onCreateWorkOrder }: AlertCardProps) {
+  const { can } = useAuth()
+  // technicians may only open work orders assigned to them; others would be refused
+  const canOpenWorkOrder = can('workorder.view_all')
   return (
     <li
       className={`flex flex-wrap items-start justify-between gap-4 border-l-4 px-5 py-4 ${
@@ -50,7 +54,9 @@ export default function AlertCard({ alert: a, busy, onAcknowledge, onCreateWorkO
           </Can>
         )}
 
-        {a.work_order_id ? (
+        {a.work_order_id && !canOpenWorkOrder ? (
+          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600">Work order opened</span>
+        ) : a.work_order_id ? (
           <Link
             to={`/work-orders/${a.work_order_id}`}
             className="rounded-lg border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 hover:bg-teal-50"

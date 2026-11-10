@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRightLeft, ClipboardPlus, Gauge, Power, Repeat } from 'lucide-react'
+import { ArrowLeft, ArrowRightLeft, ClipboardPlus, Gauge, Megaphone, Power, Repeat } from 'lucide-react'
 import { useFetch } from '../hooks/useFetch'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -16,17 +16,20 @@ import TransferModal from '../components/assets/TransferModal'
 import StatusModal from '../components/assets/StatusModal'
 import DecommissionModal from '../components/assets/DecommissionModal'
 import CreateWorkOrderModal from '../components/workorders/CreateWorkOrderModal'
+import ReportFaultModal from '../components/requests/ReportFaultModal'
+import { useAuth } from '../auth/auth-context'
 import WorkOrderTable from '../components/workorders/WorkOrderTable'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AssetDetail } from '../api/types'
 import Can from '../components/auth/Can'
 
-type ModalName = 'runtime' | 'transfer' | 'status' | 'decommission' | 'workorder' | null
+type ModalName = 'runtime' | 'transfer' | 'status' | 'decommission' | 'workorder' | 'report' | null
 
 export default function AssetDetailPage() {
   const { id } = useParams()
   const { data, loading, error, reload } = useFetch<AssetDetail>(`/assets/${id}/`)
   const [modal, setModal] = useState<ModalName>(null)
+  const { can } = useAuth()
 
   const back = (
     <Link to="/assets" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-teal-700">
@@ -79,6 +82,11 @@ export default function AssetDetailPage() {
                     <ClipboardPlus size={16} /> New work order
                   </Button>
                 </Can>
+                {can('request.create') && !can('workorder.create') && (
+                  <Button onClick={() => setModal('report')}>
+                    <Megaphone size={16} /> Report a fault
+                  </Button>
+                )}
                 <Can permission="asset.update_status">
                   <Button variant="secondary" onClick={() => setModal('runtime')}>
                     <Gauge size={16} /> Runtime
@@ -150,10 +158,12 @@ export default function AssetDetailPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader title="Work order history" subtitle="Maintenance, calibration and repairs with their costs" />
-          <WorkOrderTable workOrders={data.work_orders} showAsset={false} pageSize={5} />
-        </Card>
+        {can('workorder.view') && (
+          <Card>
+            <CardHeader title="Work order history" subtitle="Maintenance, calibration and repairs with their costs" />
+            <WorkOrderTable workOrders={data.work_orders} showAsset={false} pageSize={5} />
+          </Card>
+        )}
       </div>
 
       {modal === 'runtime' && (
@@ -168,6 +178,7 @@ export default function AssetDetailPage() {
       {modal === 'workorder' && (
         <CreateWorkOrderModal initial={{ assetId: asset.asset_id }} onClose={() => setModal(null)} />
       )}
+      {modal === 'report' && <ReportFaultModal assetId={asset.asset_id} onClose={() => setModal(null)} />}
       {modal === 'decommission' && (
         <DecommissionModal assetId={asset.asset_id} assetTag={asset.asset_tag} onClose={() => setModal(null)} onDone={done} />
       )}

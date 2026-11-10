@@ -314,4 +314,20 @@ BEGIN
    ORDER BY u.full_name;
 END$$
 
+-- ---------------------------------------------------------------------
+-- Service requests: reviewers see all, everyone else only their own
+-- ---------------------------------------------------------------------
+CREATE PROCEDURE sp_list_service_requests(IN p_status VARCHAR(20))
+BEGIN
+  CALL sp_require_permission('request.view');
+  SELECT * FROM vw_service_requests
+   WHERE (p_status IS NULL OR p_status = ''
+          OR (p_status = 'Active' AND status = 'Pending')
+          OR status = p_status)
+     AND (fn_has_permission('request.review') = 1 OR reported_by = @app_user)
+   ORDER BY FIELD(status, 'Pending','Converted','Linked','Rejected'),
+            FIELD(priority, 'Critical','High','Medium','Low'), reported_at DESC
+   LIMIT 200;
+END$$
+
 DELIMITER ;

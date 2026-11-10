@@ -751,4 +751,122 @@ BEGIN
     FROM technicians WHERE technician_id = p_technician_id;
 END$$
 
+-- ---------------------------------------------------------------------
+-- Service requests: report -> review (convert / link / reject)
+-- ---------------------------------------------------------------------
+CREATE PROCEDURE sp_report_fault(
+  IN p_asset_id INT, IN p_priority VARCHAR(10), IN p_description VARCHAR(500))
+BEGIN
+  DECLARE v_id INT;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('request.create');
+
+  START TRANSACTION;
+  INSERT INTO service_requests (asset_id, priority, description, reported_by)
+  VALUES (p_asset_id, IFNULL(p_priority, 'Medium'), TRIM(p_description),
+          COALESCE(@app_user, CURRENT_USER()));
+  SET v_id = LAST_INSERT_ID();
+  COMMIT;
+
+  SELECT * FROM vw_service_requests WHERE request_id = v_id;
+END$$
+
+CREATE PROCEDURE sp_convert_request(
+  IN p_request_id INT, IN p_type_id INT, IN p_priority VARCHAR(10), IN p_note VARCHAR(500))
+BEGIN
+  DECLARE v_status VARCHAR(10) DEFAULT NULL;
+  DECLARE v_asset INT;
+  DECLARE v_desc VARCHAR(500);
+  DECLARE v_pri VARCHAR(10);
+  DECLARE v_by VARCHAR(100);
+  DECLARE v_wo INT;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('request.review');
+
+  START TRANSACTION;
+  SELECT status, asset_id, description, priority, reported_by
+    INTO v_status, v_asset, v_desc, v_pri, v_by
+    FROM service_requests WHERE request_id = p_request_id FOR UPDATE;
+  IF v_status IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Request not found.';
+  ELSEIF v_status <> 'Pending' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This request has already been reviewed.';
+  END IF;
+
+  INSERT INTO work_orders (asset_id, type_id, priority, description, created_by)
+  VALUES (v_asset, p_type_id, IFNULL(p_priority, v_pri),
+          LEFT(CONCAT(v_desc, ' (reported by ', v_by, ', SR-', LPAD(p_request_id, 6, '0'), ')'), 500),
+          COALESCE(@app_user, CURRENT_USER()));
+  SET v_wo = LAST_INSERT_ID();
+
+  UPDATE service_requests
+     SET status = 'Converted', work_order_id = v_wo, review_note = NULLIF(TRIM(p_note), ''),
+         reviewed_by = COALESCE(@app_user, CURRENT_USER()), reviewed_at = NOW()
+   WHERE request_id = p_request_id;
+  COMMIT;
+
+  SELECT * FROM vw_service_requests WHERE request_id = p_request_id;
+END$$
+
+CREATE PROCEDURE sp_link_request(
+  IN p_request_id INT, IN p_work_order_id INT, IN p_note VARCHAR(500))
+BEGIN
+  DECLARE v_status VARCHAR(10) DEFAULT NULL;
+  DECLARE v_asset INT;
+  DECLARE v_wo_asset INT DEFAULT NULL;
+  DECLARE v_wo_status VARCHAR(12);
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('request.review');
+
+  START TRANSACTION;
+  SELECT status, asset_id INTO v_status, v_asset
+    FROM service_requests WHERE request_id = p_request_id FOR UPDATE;
+  IF v_status IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Request not found.';
+  ELSEIF v_status <> 'Pending' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This request has already been reviewed.';
+  END IF;
+
+  SELECT asset_id, status INTO v_wo_asset, v_wo_status
+    FROM work_orders WHERE work_order_id = p_work_order_id;
+  IF v_wo_asset IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Work order not found.';
+  ELSEIF v_wo_asset <> v_asset THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'That work order belongs to a different asset.';
+  ELSEIF v_wo_status NOT IN ('Open','Assigned','In Progress') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an open work order can be linked.';
+  END IF;
+
+  UPDATE service_requests
+     SET status = 'Linked', work_order_id = p_work_order_id, review_note = NULLIF(TRIM(p_note), ''),
+         reviewed_by = COALESCE(@app_user, CURRENT_USER()), reviewed_at = NOW()
+   WHERE request_id = p_request_id;
+  COMMIT;
+
+  SELECT * FROM vw_service_requests WHERE request_id = p_request_id;
+END$$
+
+CREATE PROCEDURE sp_reject_request(IN p_request_id INT, IN p_note VARCHAR(500))
+BEGIN
+  DECLARE v_status VARCHAR(10) DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+  CALL sp_require_permission('request.review');
+
+  START TRANSACTION;
+  SELECT status INTO v_status FROM service_requests WHERE request_id = p_request_id FOR UPDATE;
+  IF v_status IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Request not found.';
+  ELSEIF v_status <> 'Pending' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This request has already been reviewed.';
+  END IF;
+
+  UPDATE service_requests
+     SET status = 'Rejected', review_note = NULLIF(TRIM(p_note), ''),
+         reviewed_by = COALESCE(@app_user, CURRENT_USER()), reviewed_at = NOW()
+   WHERE request_id = p_request_id;
+  COMMIT;
+
+  SELECT * FROM vw_service_requests WHERE request_id = p_request_id;
+END$$
+
 DELIMITER ;

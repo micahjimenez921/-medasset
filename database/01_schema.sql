@@ -213,6 +213,26 @@ CREATE TABLE work_orders (
     REFERENCES maintenance_types (type_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE service_requests (
+  request_id    INT AUTO_INCREMENT PRIMARY KEY,
+  asset_id      INT          NOT NULL,
+  priority      ENUM('Low','Medium','High','Critical') NOT NULL DEFAULT 'Medium',
+  description   VARCHAR(500) NOT NULL,
+  reported_by   VARCHAR(100) NOT NULL,
+  reported_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status        ENUM('Pending','Converted','Linked','Rejected') NOT NULL DEFAULT 'Pending',
+  work_order_id INT          NULL,                      -- the job this request became / was linked to
+  review_note   VARCHAR(500) NULL,
+  reviewed_by   VARCHAR(100) NULL,
+  reviewed_at   DATETIME     NULL,
+  CONSTRAINT fk_sr_asset FOREIGN KEY (asset_id)
+    REFERENCES assets (asset_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_sr_wo FOREIGN KEY (work_order_id)
+    REFERENCES work_orders (work_order_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  INDEX ix_sr_status (status),
+  INDEX ix_sr_reporter (reported_by)
+) ENGINE=InnoDB;
+
 CREATE TABLE work_order_assignments (
   assignment_id  INT AUTO_INCREMENT PRIMARY KEY,
   work_order_id  INT          NOT NULL,

@@ -8,7 +8,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 
 ## Objectives
 
-1. Design a normalized relational database (25 tables) for the full life cycle of hospital medical equipment.
+1. Design a normalized relational database (26 tables) for the full life cycle of hospital medical equipment.
 2. Enforce business rules inside the database with triggers, constraints and transactional stored procedures, so rules hold no matter which application connects.
 3. Automate preventive maintenance with calendar-based and runtime-based schedules, a database trigger and a daily scheduled event.
 4. Track work orders with technicians, parts and labor, and compute lifetime maintenance cost per asset.
@@ -20,10 +20,11 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 - **Asset lifecycle tracking:** registration, department/location transfers, status history, warranty, acquisition by public bidding or donation, and decommissioning.
 - **Automated preventive maintenance:** schedules by calendar (every N days) or machine runtime (every N hours). A trigger raises alerts as runtime nears the due value, and the event `evt_daily_preventive_check` runs every day at 06:00.
 - **Work orders:** Open, Assigned, In Progress, Completed or Cancelled. Triggers enforce the workflow, move the asset to *Repair* and back, and roll schedules forward.
+- **Service requests (typical hospital process):** a technician reports a fault; the administrator reviews it and either opens a work order, links it to a job that is already open, or rejects it with a reason. A trigger allows only one open work order per asset and job type, so several reports of the same problem never create duplicate jobs.
 - **Cost tracking:** labor and parts cost are snapshotted so past reports never change. Reports cover cost by month, department and category, and preventive versus corrective work.
 - **Audit logs:** triggers record old and new values with the real user name. Audit and security tables are append-only.
 - **Staff and external technicians:** staff technicians (in-house and provincial engineering) can have a sign-in account; external technicians (contractors and manufacturer engineers) never sign in. Work done by an external technician needs the company's service report number before it can be completed.
-- **Role-based access control:** three roles (Administrator, Technician, Viewer). Permissions are rows in the database and are enforced inside the stored procedures.
+- **Role-based access control:** four roles (Administrator, Technician, Department Staff, Viewer). Permissions are rows in the database and are enforced inside the stored procedures.
 - **Secure sign-in:** PBKDF2 password hashing, server-side sessions with idle and absolute timeouts, 5-failed-attempt lock-out, and forced password change on temporary passwords.
 - **Least-privilege database account:** the web app connects as `medasset_app`, which can only `EXECUTE` stored procedures.
 
@@ -31,11 +32,11 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 
 | Object | Count | Examples |
 |---|---|---|
-| Tables | 25 | `assets`, `maintenance_schedules`, `work_orders`, `audit_logs`, `users`, `roles`, `permissions` |
-| Triggers | 48 | status and transfer history, runtime alerts, work-order workflow, audit logging, append-only guards |
-| Stored procedures | 52 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
-| Functions | 6 | `fn_work_order_labor_cost`, `fn_work_order_parts_cost`, `fn_asset_total_cost`, `fn_schedule_state`, `fn_has_permission`, `fn_can_access_work_order` |
-| Views | 5 | `vw_asset_overview`, `vw_work_order_summary`, `vw_work_order_secure`, `vw_schedule_status`, `vw_alerts` |
+| Tables | 26 | `assets`, `maintenance_schedules`, `work_orders`, `audit_logs`, `users`, `roles`, `permissions` |
+| Triggers | 53 | status and transfer history, runtime alerts, work-order workflow, audit logging, append-only guards |
+| Stored procedures | 57 | `sp_register_asset`, `sp_transfer_asset`, `sp_create_work_order`, `sp_complete_work_order`, `sp_require_permission` |
+| Functions | 7 | `fn_work_order_labor_cost`, `fn_work_order_parts_cost`, `fn_asset_total_cost`, `fn_schedule_state`, `fn_has_permission`, `fn_can_access_work_order`, `fn_user_full_name` |
+| Views | 6 | `vw_asset_overview`, `vw_work_order_summary`, `vw_work_order_secure`, `vw_schedule_status`, `vw_alerts`, `vw_service_requests` |
 | Scheduled event | 1 | `evt_daily_preventive_check` (daily at 06:00) |
 
 ### Roles
@@ -43,7 +44,8 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 | Role | Typical user | Can do |
 |---|---|---|
 | Administrator | Biomedical/IT admin, asset manager | Everything, including user management and audit trail |
-| Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | View assets, schedules and alerts, acknowledge alerts, report faults on an asset and carry out work orders (only the administrator turns an alert into a job and assigns it). Sees and acts only on work orders assigned to them or opened by them (enforced in the database), with costs hidden. Cannot decommission, cancel work orders, view reports or audit, or manage users |
+| Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | View assets, schedules and alerts (read only), report faults (service requests) and carry out work orders. Only the administrator acknowledges alerts, turns an alert or a request into a work order, and assigns it. Sees and acts only on work orders assigned to them or opened by them (enforced in the database), with costs hidden. Cannot decommission, cancel work orders, view reports or audit, or manage users |
+| Department Staff | Nurses and department staff who notice faults | View equipment and report faults. See only their own reports and their outcome. No dashboard, alerts, schedules or work orders |
 | Viewer | Department heads, finance, quality and auditors | Read-only access, including reports and audit trail |
 
 See [SECURITY.md](SECURITY.md) for the full list of controls and known limits.
@@ -148,7 +150,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and sign in with the administrator account. Create Technician and Viewer users from the **Users** page (a Technician account also needs a technician number, team and hourly rate, and appears in the work-order assignment list). Manage external technicians on the **Technicians** page. The temporary password is shown once and must be changed at first sign-in.
+Open http://localhost:5173 and sign in with the administrator account. Create Technician, Department Staff and Viewer users from the **Users** page (a Technician account also needs a technician number, team and hourly rate, and appears in the work-order assignment list). Manage external technicians on the **Technicians** page. The temporary password is shown once and must be changed at first sign-in.
 
 Optional: save a hospital photo as `frontend/public/hospital.jpg` for the sign-in page.
 

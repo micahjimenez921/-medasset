@@ -23,6 +23,11 @@ const toneByValue: Record<string, Tone> = {
   'In Progress': 'amber',
   Completed: 'green',
   Cancelled: 'slate',
+  // service requests
+  Pending: 'amber',
+  Converted: 'green',
+  Linked: 'sky',
+  Rejected: 'slate',
   // priority
   Low: 'slate',
   Medium: 'sky',

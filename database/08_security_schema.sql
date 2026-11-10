@@ -101,8 +101,9 @@ CREATE INDEX idx_secev_type ON security_events (event_type, event_id);
 -- ---------------------------------------------------------------------
 INSERT INTO roles (name, description) VALUES
  ('Administrator', 'Full access, including user management and the audit trail.'),
- ('Technician',    'Field worker: views equipment, schedules and alerts, reports faults, and carries out assigned work orders. Cannot register, transfer or retire equipment, manage schedules, assign work, cancel, see costs or manage users.'),
- ('Viewer',        'Read-only access to equipment, work orders, reports and the audit trail.');
+ ('Technician',    'Field worker: views equipment, schedules and alerts (read only), reports faults (service requests), and carries out assigned work orders. Cannot register, transfer or retire equipment, manage schedules, assign work, cancel, see costs or manage users.'),
+ ('Viewer',        'Read-only access to equipment, work orders, reports and the audit trail.'),
+ ('Department Staff', 'Nurses and department staff: view equipment and report faults. They see only their own reports.');
 
 INSERT INTO permissions (code, category, description) VALUES
  ('dashboard.view',      'Dashboard',   'See the dashboard'),
@@ -127,7 +128,10 @@ INSERT INTO permissions (code, category, description) VALUES
  ('report.view',         'Reports',     'View cost reports'),
  ('audit.view',          'Compliance',  'View the audit log, job runs and security events'),
  ('user.manage',         'Compliance',  'Create users, change roles, reset passwords, unlock accounts'),
- ('technician.manage',   'Work orders', 'Add external technicians, edit rates, link staff accounts');
+ ('technician.manage',   'Work orders', 'Add external technicians, edit rates, link staff accounts'),
+ ('request.view',       'Requests',    'See service requests (your own, or all for reviewers)'),
+ ('request.create',     'Requests',    'Report a fault on an asset'),
+ ('request.review',     'Requests',    'Turn a request into a work order, link it to an open one, or reject it');
 
 -- Written by the installer, so the audit trail says so (not "root@localhost")
 SET @app_user = 'SYSTEM (install)';
@@ -140,8 +144,13 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
  WHERE r.name = 'Technician'
    AND p.code IN ('dashboard.view','lookup.view','asset.view','schedule.view','alert.view',
-                  'alert.acknowledge','workorder.view','workorder.create',
-                  'workorder.execute','workorder.complete');
+                  'workorder.view','workorder.execute','workorder.complete',
+                  'request.view','request.create');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
+ WHERE r.name = 'Department Staff'
+   AND p.code IN ('lookup.view','asset.view','request.view','request.create');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p

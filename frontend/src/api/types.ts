@@ -352,7 +352,7 @@ export interface JobLogEntry {
 // ---------------------------------------------------------------------
 // Sign-in, users and security
 // ---------------------------------------------------------------------
-export type RoleName = 'Administrator' | 'Technician' | 'Viewer'
+export type RoleName = 'Administrator' | 'Technician' | 'Viewer' | 'Department Staff'
 
 export interface AuthUser {
   user_id: number
@@ -416,4 +416,25 @@ export interface TemporaryPasswordResult {
   user_id: number
   username: string
   temporary_password: string
+}
+
+/** A fault reported by a technician; the administrator turns it into a work order. */
+export interface ServiceRequest {
+  request_id: number
+  request_number: string
+  asset_id: number
+  asset_tag: string
+  asset_name: string
+  department: string
+  priority: 'Low' | 'Medium' | 'High' | 'Critical'
+  description: string
+  reported_by: string
+  reporter_name: string
+  reported_at: string
+  status: 'Pending' | 'Converted' | 'Linked' | 'Rejected'
+  work_order_id: number | null
+  wo_number: string | null
+  review_note: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
 }
