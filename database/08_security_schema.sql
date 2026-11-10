@@ -102,7 +102,7 @@ CREATE INDEX idx_secev_type ON security_events (event_type, event_id);
 INSERT INTO roles (name, description) VALUES
  ('Administrator', 'Full access, including user management and the audit trail.'),
  ('Technician',    'Field worker: views equipment, schedules and alerts (read only), reports faults (service requests), and carries out assigned work orders. Cannot register, transfer or retire equipment, manage schedules, assign work, cancel, see costs or manage users.'),
- ('Viewer',        'Read-only access to equipment, work orders, reports and the audit trail.'),
+ ('Management',    'Hospital management and oversight: department heads, finance, quality officers and auditors. Read-only access to equipment, work orders, costs, reports and the audit trail.'),
  ('Department Staff', 'Nurses and department staff: view equipment and report faults. They see only their own reports.');
 
 INSERT INTO permissions (code, category, description) VALUES
@@ -154,7 +154,7 @@ SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r JOIN permissions p
- WHERE r.name = 'Viewer'
+ WHERE r.name = 'Management'
    AND p.code IN ('dashboard.view','lookup.view','asset.view','schedule.view','alert.view',
                   'workorder.view','workorder.view_all','report.view','audit.view');
 

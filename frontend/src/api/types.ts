@@ -352,7 +352,7 @@ export interface JobLogEntry {
 // ---------------------------------------------------------------------
 // Sign-in, users and security
 // ---------------------------------------------------------------------
-export type RoleName = 'Administrator' | 'Technician' | 'Viewer' | 'Department Staff'
+export type RoleName = 'Administrator' | 'Technician' | 'Management' | 'Department Staff'
 
 export interface AuthUser {
   user_id: number

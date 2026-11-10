@@ -20,7 +20,7 @@ export default function UserFormModal({ user, roles, isSelf, onClose, onDone, on
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState(user?.full_name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
-  const [roleId, setRoleId] = useState(String(user?.role_id ?? roles.find((r) => r.name === 'Viewer')?.role_id ?? ''))
+  const [roleId, setRoleId] = useState(String(user?.role_id ?? roles.find((r) => r.name === 'Management')?.role_id ?? ''))
   const [active, setActive] = useState(user ? !!user.is_active : true)
   // technician profile (only when creating an account with the Technician role)
   const [employeeNo, setEmployeeNo] = useState('')
@@ -76,11 +76,15 @@ export default function UserFormModal({ user, roles, isSelf, onClose, onDone, on
       <Field label="Email">
         <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
-      <Field label="Role" hint={isSelf ? 'You cannot change your own role.' : undefined} required>
+      <Field
+        label="Role"
+        hint={isSelf ? 'You cannot change your own role.' : roles.find((r) => String(r.role_id) === roleId)?.description}
+        required
+      >
         <SelectInput value={roleId} onChange={(e) => setRoleId(e.target.value)} disabled={isSelf} required>
           {roles.map((r) => (
             <option key={r.role_id} value={r.role_id}>
-              {r.name} - {r.description}
+              {r.name}
             </option>
           ))}
         </SelectInput>

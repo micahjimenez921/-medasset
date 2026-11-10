@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { errorMessage } from '../api/client'
@@ -8,13 +8,13 @@ import Button from '../components/ui/Button'
 
 // One style for both boxes, so they always line up exactly.
 const inputClass =
-  'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20'
+  'block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20'
 
 export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  // always start from the home page: the previous user's last page may be forbidden for this role
+  const from = '/'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -63,7 +63,8 @@ export default function LoginPage() {
             </span>
             <h2 className="mt-3 text-3xl font-bold leading-tight">Welcome to MedAsset</h2>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: '#d2eee0' }}>
-              Protect patient safety by keeping every medical asset tracked, maintained, and compliant.
+              Track every medical device, keep preventive maintenance on schedule, and keep a complete audit trail of
+              who did what.
             </p>
           </div>
         </aside>

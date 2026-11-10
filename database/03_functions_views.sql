@@ -73,7 +73,7 @@ BEGIN
   RETURN v_count > 0;
 END$$
 
--- A user may open a work order when they can see all of them (Administrator, Viewer),
+-- A user may open a work order when they can see all of them (Administrator, Management),
 -- or they are assigned to it, or they opened it themselves (Technician).
 CREATE FUNCTION fn_can_access_work_order(p_work_order_id INT)
 RETURNS TINYINT(1)

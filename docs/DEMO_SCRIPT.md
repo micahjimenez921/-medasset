@@ -1,12 +1,12 @@
 # MedAsset demo script (about 15 minutes)
 
 Before you start: MySQL running (event scheduler on), `python manage.py runserver`, `npm run dev`, demo data loaded,
-accounts `admin` (Administrator), `tech1` (Technician) and `viewer1` (Viewer) created with their passwords changed.
+accounts `admin` (Administrator), `tech1` (Technician) and `mgmt1` (Management) created with their passwords changed.
 Use three browser profiles or sign out between roles.
 
 ## 1. Sign in and roles (2 min)
 1. Open http://localhost:5173. Point out: hospital branding, "Sign-ins and actions are recorded".
-2. Sign in as **viewer1**. Menu shows no Users; open any asset: **no action buttons**. Open Audit log: read-only.
+2. Sign in as **mgmt1** (Management). Menu shows no Users; open any asset: **no action buttons**. Open Audit log: read-only.
 3. Sign in as **tech1**. Open an asset: only **Report a fault** is available (it sends a service request; the technician cannot open work orders); Transfer, Status, Runtime and Decommission are not. Schedules are view-only.
 3a. Sign in as a **Department Staff** user (e.g. a nurse): the menu has only Assets and My reports. Open an asset, click **Report a fault**.
 3b. Still as the technician, click **Report a fault** on an asset, then open **My reports**: the request shows *Waiting for review*.
@@ -63,6 +63,6 @@ UPDATE audit_logs SET changed_by = 'someone' WHERE audit_id = 1;   -- fails: app
 ```
 
 ## 7. Security demonstration (optional)
-1. Enter a wrong password for **viewer1** five times; the account locks. As admin, **Users → Unlock**.
+1. Enter a wrong password for **mgmt1** five times; the account locks. As admin, **Users → Unlock**.
 2. Security events show LOGIN_FAILED ×5, ACCOUNT_LOCKED, ACCOUNT_UNLOCKED.
-3. As viewer1 open `http://localhost:8000/api/users/` directly: 403 (the database refuses).
+3. As mgmt1 open `http://localhost:8000/api/users/` directly: 403 (the database refuses).

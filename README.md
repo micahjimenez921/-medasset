@@ -24,7 +24,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 - **Cost tracking:** labor and parts cost are snapshotted so past reports never change. Reports cover cost by month, department and category, and preventive versus corrective work.
 - **Audit logs:** triggers record old and new values with the real user name. Audit and security tables are append-only.
 - **Staff and external technicians:** staff technicians (in-house and provincial engineering) can have a sign-in account; external technicians (contractors and manufacturer engineers) never sign in. Work done by an external technician needs the company's service report number before it can be completed.
-- **Role-based access control:** four roles (Administrator, Technician, Department Staff, Viewer). Permissions are rows in the database and are enforced inside the stored procedures.
+- **Role-based access control:** four roles (Administrator, Technician, Department Staff, Management). Permissions are rows in the database and are enforced inside the stored procedures.
 - **Secure sign-in:** PBKDF2 password hashing, server-side sessions with idle and absolute timeouts, 5-failed-attempt lock-out, and forced password change on temporary passwords.
 - **Least-privilege database account:** the web app connects as `medasset_app`, which can only `EXECUTE` stored procedures.
 
@@ -46,7 +46,7 @@ The focus of the project is the database. The business rules live in MySQL/Maria
 | Administrator | Biomedical/IT admin, asset manager | Everything, including user management and audit trail |
 | Technician | In-house and provincial staff technicians (contractors and manufacturer engineers are recorded as external technicians and do not sign in) | View assets, schedules and alerts (read only), report faults (service requests) and carry out work orders. Only the administrator acknowledges alerts, turns an alert or a request into a work order, and assigns it. Sees and acts only on work orders assigned to them or opened by them (enforced in the database), with costs hidden. Cannot decommission, cancel work orders, view reports or audit, or manage users |
 | Department Staff | Nurses and department staff who notice faults | View equipment and report faults. See only their own reports and their outcome. No dashboard, alerts, schedules or work orders |
-| Viewer | Department heads, finance, quality and auditors | Read-only access, including reports and audit trail |
+| Management | Department heads, finance, quality officers and auditors | Read-only oversight of equipment, work orders, costs, reports and the audit trail |
 
 See [SECURITY.md](SECURITY.md) for the full list of controls and known limits.
 
@@ -150,7 +150,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and sign in with the administrator account. Create Technician, Department Staff and Viewer users from the **Users** page (a Technician account also needs a technician number, team and hourly rate, and appears in the work-order assignment list). Manage external technicians on the **Technicians** page. The temporary password is shown once and must be changed at first sign-in.
+Open http://localhost:5173 and sign in with the administrator account. Create Technician, Department Staff and Management users from the **Users** page (a Technician account also needs a technician number, team and hourly rate, and appears in the work-order assignment list). Manage external technicians on the **Technicians** page. The temporary password is shown once and must be changed at first sign-in.
 
 Optional: save a hospital photo as `frontend/public/hospital.jpg` for the sign-in page.
 
